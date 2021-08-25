@@ -1,0 +1,31 @@
+.Connect label {
+  color: #cccccc;
+}
+
+.ConnectGroup {
+}
+
+.Row {
+  margin: auto;
+  margin-top: 6px;
+  width: 750px;
+}
+
+.Row input {
+  width: 100%;
+  font-size: 14px;
+  color: white;
+  background-color: #333333;
+  border: 1px solid #222;
+}
+
+.MessagesItem {
+  width: 750px;
+}
+
+.MessagesItem textarea {
+  width: 750px;
+  color: #fff;
+  background-color: #333;
+  border: 1px solid #222;
+}

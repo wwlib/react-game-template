@@ -1,0 +1,11 @@
+.Checkbox {
+    margin-left: 8px;
+}
+
+.Checkbox input[type="checkbox"] {
+    cursor: crosshair;
+}
+
+.Checkbox label {
+    color: darkgrey;
+}

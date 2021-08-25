@@ -1,0 +1,83 @@
+{
+  "name": "react-game-template",
+  "version": "0.0.1",
+  "main": "build/electron.js",
+  "homepage": "./",
+  "private": true,
+  "scripts": {
+    "start": "env-cmd -f .env.web craco start",
+    "start:electron": "electron .",
+    "build": "craco build",
+    "build:electron": "env-cmd -f .env.electron craco build",
+    "test": "react-scripts test",
+    "test:craco": "craco test",
+    "eject": "echo eject:disabled",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "scripts-original": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "build": {
+    "asar": false,
+    "files": [
+        "build",
+        "node_modules",
+        "package.json",
+        ".env*"
+    ]
+},
+  "dependencies": {
+    "@craco/craco": "^5.7.0",
+    "@testing-library/jest-dom": "^5.11.4",
+    "@testing-library/react": "^11.1.0",
+    "@testing-library/user-event": "^12.1.10",
+    "@types/jest": "^26.0.15",
+    "@types/node": "^12.0.0",
+    "@types/react": "^16.9.53",
+    "@types/react-dom": "^16.9.8",
+    "interaction-flow-engine": "git+ssh://git@gitlab.com:ntt-disruption-global/jibo/jibo-rom/interaction-flow-engine.git#7a67b66e0759d88487c47f87fb9a80bd063f28a8",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "web-vitals": "^0.2.4"
+  },
+  "devDependencies": {
+    "electron": "^10.1.5",
+    "electron-builder": "^22.9.1",
+    "env-cmd": "^10.1.0",
+    "react-scripts": "4.0.1",
+    "typescript": "^4.0.3",
+    "webpack-node-externals": "^2.5.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": [
+    "react,create-react-app,cra,craco,electron,electron-builder"
+  ],
+  "author": "Andrew Rapo",
+  "contributors": [],
+  "license": "MIT"
+}

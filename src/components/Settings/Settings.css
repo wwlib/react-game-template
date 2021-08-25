@@ -1,0 +1,34 @@
+.Settings .form-control {
+  color: white;
+  background-color: #333333;
+  border: 1px solid #222;
+}
+
+.Settings label {
+  color: #cccccc;
+}
+
+.SettingsGroup {
+}
+
+.Row {
+  margin: auto;
+  margin-top: 6px;
+  width: 750px;
+}
+
+.SettingsItem {
+  width: 750px;
+  margin-left: 100px;
+}
+
+.GameSettingsItem {
+  width: 750px;
+}
+
+.GameSettingsItem textarea {
+  width: 750px;
+  color: #fff;
+  background-color: #333;
+  border: 1px solid #222;
+}
