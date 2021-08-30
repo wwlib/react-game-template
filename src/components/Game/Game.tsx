@@ -25,8 +25,13 @@ export interface GameState {
   shipFuel: number;
   shipState: ShipState;
   gravity: any;
+  world: any;
   landingPadRect: any;
   autoPilotRunning: boolean;
+  totalTime: number;
+  fuelBonus: number;
+  timeBonus: number;
+  score: number;
 }
 
 export default class Game extends React.Component<GameProps, GameState> {
@@ -38,6 +43,7 @@ export default class Game extends React.Component<GameProps, GameState> {
   constructor(props: GameProps) {
     super(props);
     this.state = this.props.model.gameState;
+    console.log(this.state);
   }
 
   componentWillMount() {
@@ -138,16 +144,21 @@ export default class Game extends React.Component<GameProps, GameState> {
   render() {
     const gameStatusData = {
       keyStatus: this.props.model.keyStatus,
+      world: this.state.world,
       shipState: ShipState[this.state.shipState],
       shipFuel: this.state.shipFuel,
       shipVelocity: this.state.shipVelocity,
+      totalTime: this.state.totalTime,
+      fuelBonus: this.state.fuelBonus,
+      timeBonus: this.state.timeBonus,
+      score: this.state.score,
     }
     const gameStatus = JSON.stringify(gameStatusData, null, 2);
     return (
       <div className='Game' >
-        <GameCanvas shipCoords={this.state.shipCoords} shipThrust={this.state.shipThrust} shipState={this.state.shipState} landingPadRect={this.state.landingPadRect} shipFuel={this.state.shipFuel} />
+        <GameCanvas shipCoords={this.state.shipCoords} shipThrust={this.state.shipThrust} shipState={this.state.shipState} world={this.state.world} landingPadRect={this.state.landingPadRect} shipFuel={this.state.shipFuel} />
         <div id='GameControls'>
-          <textarea className="KeyStatus" value={gameStatus} readOnly rows={20} />
+          <textarea className="KeyStatus" value={gameStatus} readOnly rows={30} />
           <Checkbox label={'AutoPilot'} isChecked={this.state.autoPilotRunning} changed={(isChecked) => this.onCheckboxHandler('AutoPilot', isChecked)} />
           <button id='btnReset' type='button' className={`btn btn-primary App-button`}
             onClick={(event) => this.onButtonClicked(`btnReset`, event)}>

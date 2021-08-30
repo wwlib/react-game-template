@@ -60,7 +60,7 @@ let menuTemplate = [
 function createWindow() {
     // Create the browser window.
     Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate));
-    mainWindow = new BrowserWindow({width: 1200, height: 780, webPreferences: { nodeIntegration: true, enableRemoteModule: true }});
+    mainWindow = new BrowserWindow({width: 1024, height: 780, webPreferences: { nodeIntegration: true, enableRemoteModule: true }});
 
     // and load the index.html of the app.
     // console.log(__dirname);

@@ -42,6 +42,7 @@ export default class Model {
       shipFuel: 200,
       shipState: ShipState.FALLING,
       gravity: { x: 0, y: -1 },
+      world: { width: 0, height: 0 },
       landingPadRect: { x: 300, y: 590, width: 100, height: 10 },
       autoPilotRunning: false
     };
