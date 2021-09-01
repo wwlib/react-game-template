@@ -6517,9 +6517,9 @@ ini@^1.3.4, ini@^1.3.5, ini@~1.3.0:
   resolved "https://registry.npmjs.org/ini/-/ini-1.3.8.tgz#a29da425b48806f34767a4efce397269af28432c"
   integrity sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==
 
-"interaction-flow-engine@git+ssh://git@gitlab.com:ntt-disruption-global/jibo/jibo-rom/interaction-flow-engine.git#7a67b66e0759d88487c47f87fb9a80bd063f28a8":
+"interaction-flow-engine@git+ssh://git@gitlab.com:ntt-disruption-global/jibo/jibo-rom/interaction-flow-engine.git#434a542f8332f84bea42162f10a9088a42446601":
   version "0.0.4"
-  resolved "git+ssh://git@gitlab.com:ntt-disruption-global/jibo/jibo-rom/interaction-flow-engine.git#7a67b66e0759d88487c47f87fb9a80bd063f28a8"
+  resolved "git+ssh://git@gitlab.com:ntt-disruption-global/jibo/jibo-rom/interaction-flow-engine.git#434a542f8332f84bea42162f10a9088a42446601"
   dependencies:
     callsite "^1.0.0"
     chalk "^2.4.2"

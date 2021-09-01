@@ -31,6 +31,12 @@ export default class GameController {
             width: 800,
             height: 600
         }
+        if (model.config.Game.world) {
+            this._world = {
+                width: model.config.Game.world.width || this._world.width,
+                height: model.config.Game.world.height || this._world.height,
+            }
+        }
         this.shipCoords = { x: 10 + Math.random() * (this._world.width - 20), y: 100 };
         this.shipVelocity = { x: 0, y: 0 };
         this.shipThrust = { x: 0, y: 0 };

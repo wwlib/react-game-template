@@ -44,7 +44,9 @@ export default class BehaviorTreeFactory {
         }
         return this.bt;
     }
-    
+
+    // generated from bt (json) file
+
     getBtRoot = function (blackboard: any, notepad: any, result: any) {
         const Sequ_5c663278 = new BehaviorClasses.Sequence({
             name: 'Root',
@@ -58,9 +60,16 @@ export default class BehaviorTreeFactory {
                 notepad.vCooldownTime = 500;
                 notepad.hCooldownTime = 200;
                 notepad.tCooldownTime = 200;
-                const padCenter = blackboard.controller.landingPadRect.x + (blackboard.controller.landingPadRect.width / 2);
+                const padCenter = blackboard.controller.landingPadRect.x + blackboard.controller.landingPadRect.width / 2;
                 const padY = blackboard.controller.landingPadRect.y;
-                notepad.target = { x: padCenter, y: padY, velocity: { x: 0, y: 0 } };
+                notepad.target = {
+                    x: padCenter,
+                    y: padY,
+                    velocity: {
+                        x: 0,
+                        y: 0
+                    }
+                };
                 console.log('Init.', blackboard, notepad, result);
                 console.log(`target: (${notepad.target.x}, ${notepad.target.y}) <${notepad.target.velocity.x}, ${notepad.target.velocity.y}>`);
             },
@@ -91,7 +100,7 @@ export default class BehaviorTreeFactory {
         const Exec_ac0168f1 = new BehaviorClasses.ExecuteScript({
             name: 'VThrustOn',
             exec: () => {
-                // console.log(`VThrustOn`, blackboard);
+                console.log(`VThrustOn`);
                 blackboard.keys.ArrowUp = 'down';
             },
             id: 'ac0168f1-a455-4377-8d79-ef42b45e02cc',
@@ -127,6 +136,7 @@ export default class BehaviorTreeFactory {
                 // console.log(`HThrustOn`, blackboard);
                 const xVel = blackboard.controller.shipVelocity.x;
                 const xVelTarget = notepad.target.velocity.x;
+
                 if (xVel > xVelTarget) {
                     blackboard.keys.ArrowLeft = 'down';
                 } else if (xVel < xVelTarget) {
@@ -163,33 +173,32 @@ export default class BehaviorTreeFactory {
 
         const Exec_5e7005b5 = new BehaviorClasses.ExecuteScript({
             name: 'AdjustTarget',
-            id: '5e7005b5-b1f0-4a2a-ba6c-2f95cf8808be',
-            layout: { "x": 931, "y": 499 },
             exec: () => {
-                const padCenter = blackboard.controller.landingPadRect.x + (blackboard.controller.landingPadRect.width / 2);
+                const padCenter = blackboard.controller.landingPadRect.x + blackboard.controller.landingPadRect.width / 2;
                 const padY = blackboard.controller.landingPadRect.y;
                 const shipX = blackboard.controller.shipCoords.x + 20;
                 const hOffset = padCenter - shipX;
                 notepad.target.x = padCenter;
                 notepad.target.y = padY;
-                if (padY - blackboard.controller.shipCoords.y > 20) { // set target higher at first
+
+                if (padY - blackboard.controller.shipCoords.y > 20) {
+                    // set target higher at first
                     notepad.target.y = padY - 20;
                 }
 
                 notepad.target.velocity.x = hOffset / 50;
                 console.log(`target: (${notepad.target.x}, ${notepad.target.y}) <${notepad.target.velocity.x}, ${notepad.target.velocity.y}>`);
-
-
                 const shipAltitude = notepad.target.y - blackboard.controller.shipCoords.y;
                 notepad.target.velocity.y = -10;
-                if (shipAltitude < blackboard.controller.world.height / 2) {
+
+                if (shipAltitude < 200) {
                     notepad.target.velocity.y = -3;
                 }
-                if ((shipAltitude < 60) && (Math.abs(hOffset) > 70)) {
+
+                if (shipAltitude < 60 && Math.abs(hOffset) > 70) {
                     notepad.target.velocity.y = 3;
-                } else 
-                if (shipAltitude < 20) {
-                    notepad.target.velocity.y = 0;
+                } else if (shipAltitude < 20) {
+                    notepad.target.velocity.y = -1;
                 }
 
                 notepad.hCooldownTime = shipAltitude;
@@ -197,6 +206,8 @@ export default class BehaviorTreeFactory {
                 notepad.tCooldownTime = shipAltitude;
                 console.log(`  vCool: ${notepad.vCooldownTime}: hCool: ${notepad.hCooldownTime} `);
             },
+            id: '5e7005b5-b1f0-4a2a-ba6c-2f95cf8808be',
+            layout: { "x": 931, "y": 499 },
         });
 
         const Whil_1eb4d866 = new DecoratorClasses.WhileCondition({
@@ -214,12 +225,15 @@ export default class BehaviorTreeFactory {
             init: () => { },
             conditional: () => {
                 let hold = false;
+                const vShip = blackboard.controller.shipVelocity.y;
+                const vTarget = notepad.target.velocity.y;
 
-                if (blackboard.controller.shipVelocity.y < notepad.target.velocity.y) {
+                if (vShip < vTarget) {
                     // console.log(`velocity too high: ${blackboard.controller.shipVelocity.y} holding.`);
                     hold = true;
                 }
 
+                console.log(`  VThrustHold: ${hold}: ${vShip} ${vTarget}`);
                 return hold;
             },
             id: '7d9c2ef7-cbbe-423c-b6a8-b329ec48db20',
@@ -232,14 +246,13 @@ export default class BehaviorTreeFactory {
                 notepad.HThrustStart = Date.now();
             },
             conditional: () => {
-                let hold = false;
-
-                // const elapsed = Date.now() - notepad.HThrustStart;
+                let hold = false; // const elapsed = Date.now() - notepad.HThrustStart;
                 // if (elapsed < 50) {
                 //     hold = true;
                 // }
 
                 const velocityOffset = blackboard.controller.shipVelocity.x - notepad.target.velocity.x;
+
                 if (Math.abs(velocityOffset) > 1) {
                     hold = true;
                 }
@@ -250,15 +263,52 @@ export default class BehaviorTreeFactory {
             layout: undefined,
         });
 
+        const Whil_dda7e6b6 = new DecoratorClasses.WhileCondition({
+            init: () => {
+            },
+            conditional: () => {
+                return true;
+            },
+            name: 'vLoop',
+            id: 'dda7e6b6-e40b-46f2-8c49-be24016d62aa',
+            layout: undefined,
+        });
+
+        const Whil_cdddafaa = new DecoratorClasses.WhileCondition({
+            init: () => {
+            },
+            conditional: () => {
+                return true;
+            },
+            name: 'hLoop',
+            id: 'cdddafaa-a5be-4c68-9011-b1e3bede5f73',
+            layout: undefined,
+        });
+
+        const Whil_a3a67154 = new DecoratorClasses.WhileCondition({
+            init: () => {
+            },
+            conditional: () => {
+                return true;
+            },
+            name: 'tLoop',
+            id: 'a3a67154-59df-44d5-9213-3b46cec09bcf',
+            layout: undefined,
+        });
+
         Sequ_5c663278.children = [Exec_a21b7208, Para_d3b2ccc1];
         Para_d3b2ccc1.children = [Sequ_ff0bfe70, Sequ_db6ebc20, Sequ_c37510fd];
         Sequ_ff0bfe70.children = [Time_99d8fe74, Exec_ac0168f1, Exec_4dbd2b2a];
         Sequ_db6ebc20.children = [Time_6927b270, Exec_a006cc01, Exec_1f813ac3];
         Sequ_c37510fd.children = [Time_eea4549b, Exec_5e7005b5];
 
+
         Para_d3b2ccc1.decorators = [Whil_1eb4d866];
+        Sequ_ff0bfe70.decorators = [Whil_dda7e6b6];
         Exec_ac0168f1.decorators = [Whil_7d9c2ef7];
+        Sequ_db6ebc20.decorators = [Whil_cdddafaa];
         Exec_a006cc01.decorators = [Whil_36da6b7c];
+        Sequ_c37510fd.decorators = [Whil_a3a67154];
 
         return Sequ_5c663278;
 

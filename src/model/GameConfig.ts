@@ -22,8 +22,12 @@ export default class GameConfig {
             console.log(`could not load settings from local storage.`)
             this.initWithData({
                 Game: {
-                    autoPilot: true,
-                }
+                    "autoPilot": true,
+                    "world": {
+                      "width": 800,
+                      "height": 600
+                    }
+                  }
             });
         }
     }
