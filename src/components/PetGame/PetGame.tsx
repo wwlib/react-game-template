@@ -1,53 +1,54 @@
 import * as React from "react";
 
-import './Game.css';
+import './PetGame.css';
 import Model from '../../model/Model';
+import { GameStatus } from '../../model/GameController';
+import PetController, { Emotion, PetState, PetStateRanges, RelationshipLevel } from '../../model/PetController';
 import Log from '../../utils/Log';
 
 import Checkbox from '../Checkbox/Checkbox';
-import GameCanvas from './GameCanvas';
+import PetGameCanvas from './PetGameCanvas';
 
-export enum ShipState {
-  FALLING,
-  THRUSTING,
-  LANDED,
-  CRASHED
-}
-
-export interface GameProps {
+export interface PetGameProps {
   model: Model;
 }
 
-export interface GameState {
-  shipCoords: any;
-  shipVelocity: any;
-  shipThrust: any;
-  shipFuel: number;
-  shipState: ShipState;
-  gravity: any;
-  world: any;
-  landingPadRect: any;
-  autoPilotRunning: boolean;
-  totalTime: number;
-  fuelBonus: number;
-  timeBonus: number;
-  score: number;
+export interface PetGameState {
+  petState: PetState;
 }
 
-export default class Game extends React.Component<GameProps, GameState> {
+export default class PetGame extends React.Component<PetGameProps, PetGameState> {
 
   public log: Log;
 
   private _mainLoopInterval: NodeJS.Timeout;
+  private _stateRanges: PetStateRanges;
 
-  constructor(props: GameProps) {
+  constructor(props: PetGameProps) {
     super(props);
-    this.state = this.props.model.gameState;
+    const gameState = this.props.model.gameState;
+    if (gameState) {
+      this.state = {
+        petState: gameState,
+      }
+    } else {
+      this.state = {
+        petState: {
+          userName: '',
+          userRelationshipLevel: RelationshipLevel.NONE,
+          emotionalState: Emotion.CONTENT,
+          loneliness: 0,
+          timers: {},
+          gameStatus: GameStatus.INVALID,
+        }
+      }
+    }
     console.log(this.state);
+    this._stateRanges = (this.props.model.gameController as PetController).stateRanges;
   }
 
   componentWillMount() {
-    this.props.model.resetGame();
+    // this.props.model.resetGame('PetGame');
     this._mainLoopInterval = setInterval(this.mainLoop, 100);
   }
 
@@ -57,7 +58,7 @@ export default class Game extends React.Component<GameProps, GameState> {
 
   // componentDidMount() {}
 
-  // componentWillReceiveProps(nextProps: GameProps) {
+  // componentWillReceiveProps(nextProps: PetGameProps) {
   //   // console.log(nextProps);
   //   if (true) {
   //     this.setState({
@@ -80,7 +81,7 @@ export default class Game extends React.Component<GameProps, GameState> {
     switch (action) {
       case 'btnReset':
         console.log(`onButtonClicked: btnReset`);
-        this.props.model.resetGame();
+        this.props.model.resetGame('PetGame');
         break;
     }
   }
@@ -138,28 +139,27 @@ export default class Game extends React.Component<GameProps, GameState> {
 
   mainLoop = () => {
     const gameState = this.props.model.update();
-    this.setState(gameState);
+    if (gameState) {
+      this.setState({ petState: gameState });
+    }
   }
 
   render() {
-    const gameStatusData = {
-      keyStatus: this.props.model.keyStatus,
-      world: this.state.world,
-      shipState: ShipState[this.state.shipState],
-      shipFuel: this.state.shipFuel,
-      shipVelocity: this.state.shipVelocity,
-      totalTime: this.state.totalTime,
-      fuelBonus: this.state.fuelBonus,
-      timeBonus: this.state.timeBonus,
-      score: this.state.score,
+    const gameStateData = {
+      userName: this.state.petState.userName,
+      userRelationshipLevel: RelationshipLevel[this.state.petState.userRelationshipLevel],
+      gameStatus: GameStatus[this.state.petState.gameStatus],
+      emotionalState: Emotion[this.state.petState.emotionalState],
+      loneliness: this.state.petState.loneliness,
+      timers: this.state.petState.timers,
     }
-    const gameStatus = JSON.stringify(gameStatusData, null, 2);
+    const gameStateText = JSON.stringify(gameStateData, null, 2);
     return (
-      <div className='Game' >
-        <GameCanvas shipCoords={this.state.shipCoords} shipThrust={this.state.shipThrust} shipState={this.state.shipState} world={this.state.world} landingPadRect={this.state.landingPadRect} shipFuel={this.state.shipFuel} />
-        <div id='GameControls'>
-          <textarea className="KeyStatus" value={gameStatus} readOnly rows={30} />
-          <Checkbox label={'AutoPilot'} isChecked={this.state.autoPilotRunning} changed={(isChecked) => this.onCheckboxHandler('AutoPilot', isChecked)} />
+      <div className='PetGame' >
+        <PetGameCanvas petState={this.state.petState} petStateRanges={this._stateRanges} />
+        <div id='PetGameControls'>
+          <textarea className="KeyStatus" value={gameStateText} readOnly rows={30} />
+          {/* <Checkbox label={'AutoPilot'} isChecked={this.state.autoPilotRunning} changed={(isChecked) => this.onCheckboxHandler('AutoPilot', isChecked)} /> */}
           <button id='btnReset' type='button' className={`btn btn-primary App-button`}
             onClick={(event) => this.onButtonClicked(`btnReset`, event)}>
             Reset

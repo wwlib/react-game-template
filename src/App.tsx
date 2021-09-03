@@ -6,7 +6,8 @@ import Logo from './components/Logo/Logo';
 import Model from './model/Model';
 // import Log from './utils/Log';
 
-import Game from './components/Game/Game';
+import LanderGame from './components/LanderGame/LanderGame';
+import PetGame from './components/PetGame/PetGame';
 
 //panel components
 import Settings from './components/Settings/Settings';
@@ -48,8 +49,13 @@ export default class App extends Component<AppProps, AppState> {
             case 'tabSettings':
                 this.setState({ activeTab: 'Settings' });
                 break;
-            case 'tabGame':
-                this.setState({ activeTab: 'Game' });
+            case 'tabLanderGame':
+                this.props.model.resetGame('LanderGame');
+                this.setState({ activeTab: 'LanderGame' });
+                break;
+            case 'tabPetGame':
+                this.props.model.resetGame('PetGame');
+                this.setState({ activeTab: 'PetGame' });
                 break;
         }
     }
@@ -114,9 +120,14 @@ export default class App extends Component<AppProps, AppState> {
                         fileHandler={(fileList: any[]) => this.handleUploadFileList(fileList)}
                     />
                 break;
-            case 'Game':
+            case 'LanderGame':
                 activeTab =
-                    <Game model={this.props.model}
+                    <LanderGame model={this.props.model}
+                    />
+                break;
+            case 'PetGame':
+                activeTab =
+                    <PetGame model={this.props.model}
                     />
                 break;
         }
@@ -140,11 +151,15 @@ export default class App extends Component<AppProps, AppState> {
                         <button id='btn_settings' type='button' className={this.getButtonStyle('Settings')}
                             onClick={(event) => this.onTabButtonClicked(`tabSettings`, event)}>
                             Settings
-                            </button>
-                        <button id='btn_game' type='button' className={this.getButtonStyle('Game')}
-                            onClick={(event) => this.onTabButtonClicked(`tabGame`, event)}>
-                            Game
-                            </button>
+                        </button>
+                        <button id='btn_game' type='button' className={this.getButtonStyle('LanderGame')}
+                            onClick={(event) => this.onTabButtonClicked(`tabLanderGame`, event)}>
+                            LanderGame
+                        </button>
+                        <button id='btn_pet' type='button' className={this.getButtonStyle('PetGame')}
+                            onClick={(event) => this.onTabButtonClicked(`tabPetGame`, event)}>
+                            PetGame
+                        </button>
                     </div>
                 </header>
                 <div className={"Tabs"}>

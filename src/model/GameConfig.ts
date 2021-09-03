@@ -1,12 +1,14 @@
 export interface GameConfigOptions {
-    Game: any;
+    LanderGame: any;
+    PetGame: any;
 }
 
 export default class GameConfig {
 
     static LOCAL_STORAGE_ITEM_NAME: string = 'game-config';
 
-    public Game: any = {};
+    public LanderGame: any = {};
+    public PetGame: any = {};
 
     constructor(options?: any) {
         this.init(options);
@@ -21,7 +23,7 @@ export default class GameConfig {
         } else {
             console.log(`could not load settings from local storage.`)
             this.initWithData({
-                Game: {
+                LanderGame: {
                     "autoPilot": true,
                     "world": {
                       "width": 800,
@@ -35,10 +37,15 @@ export default class GameConfig {
     initWithData(options: any | any = {}): void {
         console.log(`GameConfig: initWithData`, options);
         // super.initWithData(options);
-        if (options.Game) {
-            this.Game = options.Game;
-        } else {
-            this.Game = {} as any;
+        if (options.LanderGame) {
+            this.LanderGame = options.LanderGame;
+        }
+        if (options.PetGame) {
+            this.PetGame = options.PetGame;
+        } 
+        if (!options.LanderGame && !options.PetGame) {
+            this.LanderGame = {} as any;
+            this.PetGame = {} as any;
         }
     }
 
@@ -79,7 +86,8 @@ export default class GameConfig {
 
     get json(): any {
         let json: any = {
-            Game: this.Game,
+            LanderGame: this.LanderGame,
+            PetGame: this.PetGame,
         };
         return json;
     }
