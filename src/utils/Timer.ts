@@ -27,8 +27,8 @@ export default class Timer {
         return this._state;
     }
 
-    getPercent(frameTime?: number) {
-        this.update(frameTime);
+    get percent() {
+        this.update();
         if (this.maxTime === 0) {
             return 0;
         } else {
@@ -49,9 +49,13 @@ export default class Timer {
         return this;
     }
 
+    incrementTime(frameTime: number) {
+        this.update(frameTime);
+    }
+
     update(frameTime?: number) {
         if (this._state === TimerState.RUNNING) {
-            frameTime = frameTime || new Date().getTime();
+            frameTime = frameTime || Date.now();
             this._elapsedTime = Math.min(frameTime - this.startTime, this.maxTime);
         }
         if (this._elapsedTime >= this.maxTime) {
@@ -75,11 +79,16 @@ export default class Timer {
 
     reset(options?: TimerOptions) {
         options = options || {}
-        this.startTime = options.startTime || new Date().getTime();
-        this.maxTime = options.maxTime || 0;
+        this.startTime = options.startTime || Date.now();
+        this.maxTime = options.maxTime || this.maxTime;
         this._elapsedTime = 0;
         this._state = TimerState.INVALID;
         return this;
+    }
+
+    restart(options?: TimerOptions) {
+        this.reset(options);
+        this.start();
     }
 
     toString() {

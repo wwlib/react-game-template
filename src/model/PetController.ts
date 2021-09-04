@@ -1,10 +1,7 @@
-import Timer, { TimerState } from "../utils/Timer";
-import GameController, { GameStatus } from "./GameController";
-import Model from "./Model";
-
-export enum PetStatus {
-    IDLE,
-}
+import Timer, { TimerState } from '../utils/Timer';
+import GameController, { GameStatus } from './GameController';
+import Model from './Model';
+import { getEnumIndices } from '../utils/Utils';
 
 export enum Emotion {
     CONTENT,
@@ -16,10 +13,22 @@ export enum Emotion {
 }
 
 export enum Intent {
-    IDLE,
     SAY_HI,
     SHARE_CONTENT,
-    ASK_QUESTION
+    ASK_QUESTION,
+    IGNORE
+}
+
+// Mazlo'shierarchy of needs: 
+// - physiological (food and clothing)
+// - safety (job security)
+// - love and belonging needs (friendship)
+// - esteem
+// - self-actualization
+export enum PetNeed {
+    LOVE,               // companionship, interaction
+    ESTEEM,             // being useful, making a contribution, being respected
+    SELF_ACTUALIZATION, // to learn, grow, get better
 }
 
 export enum RelationshipLevel {
@@ -58,21 +67,14 @@ export interface Personality {
 }
 
 export interface PetState {
+    gameStatus: GameStatus;
+    userId: string;
     userName: string;
     userRelationshipLevel: RelationshipLevel;
     emotionalState: Emotion;
-    loneliness: number;
+    needs: any;
     timers: any;
-    gameStatus: GameStatus;
-}
-
-export interface RangeProperties {
-    loneliness: number;
-}
-
-export interface PetStateRanges {
-    min: RangeProperties;
-    max: RangeProperties;
+    intentQueue: Intent[];
 }
 
 export enum TimerType {
@@ -101,7 +103,37 @@ export class Relationship {
 
     constructor(user: User, relationshipLevel: RelationshipLevel) {
         this.user = user;
-        this.relationshipLevel  = relationshipLevel;
+        this.relationshipLevel = relationshipLevel;
+    }
+}
+
+export interface PetValueRange {
+    min: number;
+    max: number;
+}
+
+export class PetValue {
+    public name: string;
+    public value: number;
+    public range: PetValueRange;
+
+    constructor(name: string, value: number, min: number, max: number) {
+        this.name = name;
+        this.value = value;
+        this.range = {
+            min: min,
+            max: max,
+        }
+    }
+
+    get percent(): number {
+        return this.value / this.range.max;
+    }
+
+    increment(value: number) {
+        if (this.value + value <= this.range.max) {
+            this.value += value;
+        }
     }
 }
 
@@ -116,17 +148,17 @@ export default class PetController extends GameController {
 
     private _petId: string;
     private _pet: any;
-    private _intentQueue: any[];
+    private _intentQueue: Intent[];
     private _relationships: Relationship[];
 
-    // timers
+    // needs
+    private _needMap: Map<PetNeed, PetValue>;
 
+    // timers
     private _timerMap: Map<TimerType, Timer>;
 
     // state
-
     private _state: PetState;
-    private _stateRanges: PetStateRanges;
 
     constructor(model: Model, petId: string) {
         super(model);
@@ -145,55 +177,39 @@ export default class PetController extends GameController {
         this._score = 0;
         this._rejectionHistory = [];
 
-        this._pet = {
-            emotion: Emotion.CONTENT,
-            intent: Intent.IDLE,
-        };
-
         this._intentQueue = [];
         this._relationships = [];
         this.addRelationship(new User('001', 'Abigail'), RelationshipLevel.NONE);
 
+        this._needMap = new Map<PetNeed, PetValue>();
+        getEnumIndices(PetNeed).forEach(index => {
+            this._needMap.set(index, new PetValue(PetNeed[index], 0, 0, 1));
+        });
+
         this._timerMap = new Map<TimerType, Timer>();
-        // this._timerMap.set(TimerType.LAST_DETECTION, new Timer(TimerType[TimerType.LAST_DETECTION]));
-
-        for (const timerType of Object.values(TimerType)) {
-            const timerTypeNum = Number(timerType);
-            if (!isNaN(timerTypeNum)) {
-                this._timerMap.set(timerTypeNum, new Timer(TimerType[timerTypeNum], { maxTime: 60000}));
-            }
-        }
-
-        console.log(Array.from(this._timerMap));
+        getEnumIndices(TimerType).forEach(index => {
+            const timer = new Timer(TimerType[index], { maxTime: 60000 });
+            timer.start();
+            this._timerMap.set(index, timer);
+        });
 
         this._timerMap.get(TimerType.LAST_INTERACTION)?.start();
 
-        this._stateRanges = {
-            min: {
-                loneliness: 0,
-            },
-            max: {
-                loneliness: 100,
-            },
-        }
-
         this._state = {
+            gameStatus: GameStatus.RUNNING,
+            userId: this._relationships[0].user.id,
             userName: this._relationships[0].user.name,
             userRelationshipLevel: this._relationships[0].relationshipLevel,
             emotionalState: this._emotionalState,
-            loneliness: 0,
+            needs: {},
             timers: {},
-            gameStatus: GameStatus.RUNNING,
+            intentQueue: this._intentQueue,
         }
         this.update();
     }
 
     get state(): any {
         return this._state;
-    }
-
-    get stateRanges(): PetStateRanges {
-        return this._stateRanges
     }
 
     addRelationship(user: User, relationshipLevel: RelationshipLevel) {
@@ -204,22 +220,59 @@ export default class PetController extends GameController {
 
     }
 
-
     prioritizeIntents() {
 
     }
 
-    update() {
-        if (this._state.loneliness < this._stateRanges.max.loneliness) {
-            this._state.loneliness += 1;
+    updateNeeds() {
+        const needLove = this._needMap.get(PetNeed.LOVE);
+        const timerLastInteraction = this._timerMap.get(TimerType.LAST_INTERACTION);
+        if (needLove && timerLastInteraction) {
+            needLove.value = 1 * timerLastInteraction.percent;
         }
+    }
+
+    update() {
+        this.updateNeeds();
+        this._state.needs = {};
+        Array.from(this._needMap).forEach(element => {
+            const elementType: PetNeed = element[0];
+            const name: string = PetNeed[elementType];
+            const value: PetValue = element[1];
+            this._state.needs[elementType] = { name: name, value: value.value, min: value.range.min, max: value.range.max, percent: value.percent }
+        });
+
         this._state.timers = {};
         Array.from(this._timerMap).forEach(element => {
-            const timerType: TimerType = element[0];
-            const name: string = TimerType[timerType];
+            const elementType: TimerType = element[0];
+            const name: string = TimerType[elementType];
             const timer: Timer = element[1];
-            this._state.timers[timerType] = { name: name, state: TimerState[timer.state], elapsed: timer.elapsedTime, percent: timer.getPercent() }
+            this._state.timers[elementType] = { name: name, state: TimerState[timer.state], start: timer.startTime, elapsed: timer.elapsedTime, max: timer.maxTime, percent: timer.percent }
         });
+    }
+
+    // action handlers
+
+    userActionSayHi() {
+        const timerLastInteraction = this._timerMap.get(TimerType.LAST_INTERACTION);
+        if (timerLastInteraction) {
+            timerLastInteraction.restart();
+        }
+    }
+
+    // game controls
+
+    onGameCanvasClick(group: string, action: string) {
+        console.log(`PetController: onGameCanvasClick:`, group, action);
+        switch (group) {
+            case 'userAction':
+                switch (action) {
+                    case 'SAY_HI':
+                        this.userActionSayHi();
+                        break;
+                }
+                break;
+        }
     }
 
     dispose() {

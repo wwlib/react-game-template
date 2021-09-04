@@ -1,0 +1,9 @@
+.PieTimerDisplay {
+    color: white;
+    display: flex;
+    flex-direction: column;
+}
+
+.PieTimerDisplayMeter {
+    display: block;
+}

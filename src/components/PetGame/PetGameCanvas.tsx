@@ -2,18 +2,19 @@ import * as React from "react";
 import './PetGame.css';
 import Log from '../../utils/Log';
 
-import { GameStatus } from '../../model/GameController';
-import { PetState, PetStateRanges, TimerType, UserAction, UserEvent } from '../../model/PetController';
-import PieMeter from './PieMeter';
+import Timer from '../../utils/Timer';
+import { getEnumLabels, getEnumLabelsAndIndices, getEnumIndices } from '../../utils/Utils';
+import { PetState, TimerType, UserAction, UserEvent, Emotion, Intent, RelationshipLevel, PetNeed, PetValue } from '../../model/PetController';
+import PieTimerDisplay from './PieTimerDisplay';
+import BarValueDisplay from './BarValueDisplay';
 
 export interface PetCanvasProps {
   petState: PetState;
-  petStateRanges: PetStateRanges;
+  clicked: any;
 }
 
 export interface PetCanvasState {
-  loneliness: number;
-  gameStatus: GameStatus;
+  petState: PetState;
 }
 
 export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvasState> {
@@ -23,8 +24,7 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
   constructor(props: PetCanvasProps) {
     super(props);
     this.state = {
-      loneliness: this.props.petState.loneliness,
-      gameStatus: this.props.petState.gameStatus,
+      petState: this.props.petState,
     }
   }
 
@@ -38,8 +38,7 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
     // console.log(nextProps);
     if (nextProps.petState !== this.props.petState) {
       this.setState({
-        loneliness: nextProps.petState.loneliness,
-        gameStatus: nextProps.petState.gameStatus,
+        petState: nextProps.petState,
       });
     }
   }
@@ -56,12 +55,10 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
   }
 
   onButtonClicked(group: string, action: string, event: any) {
-    console.log(`onButtonClicked: ${group} --> ${action}`);
+    // console.log(`onButtonClicked: ${group} --> ${action}`);
     event.preventDefault();
-
-    switch (action) {
-      case 'TBD':
-        break;
+    if (this.props.clicked) {
+      this.props.clicked(group, action);
     }
   }
 
@@ -118,72 +115,69 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
   handleDragOver(event: any) {
   }
 
-  getUserEventButtons() {
-    const result = [];
-    for (const actionType of Object.values(UserEvent)) {
-      const actionTypeNum = Number(actionType);
-      if (!isNaN(actionTypeNum)) {
-        const actionString = UserEvent[actionTypeNum];
-        const id = actionString;
-        const button = <button key={actionTypeNum} id={id} type='button' className={`btn btn-primary App-button`}
-          onClick={(event) => this.onButtonClicked('userEvent', actionString, event)}>
-          {actionString}
-        </button>
-        result.push(button);
-      }
-    }
+  getNeedValues<Type>(arg: Type, clickGroup: string, state: PetState): any {
+    const valueDisplays: any[] = [];
+    const indices: any[] = getEnumIndices(arg);
+    indices.forEach(index => {
+      const val = state.needs[index];
+      const display = <BarValueDisplay key={val.name} name={val.name} percent={val.percent} clicked={(name, percent) => console.log(name, percent)}/>
+      valueDisplays.push(display);
+    });
+    let result: any = <div className='ValueContainer'>
+      <div className='ValueContainerHeader'>{clickGroup}</div>
+      {valueDisplays}
+    </div>
     return result;
   }
 
-  getUserActionButtons() {
-    const result = [];
-    for (const actionType of Object.values(UserAction)) {
-      const actionTypeNum = Number(actionType);
-      if (!isNaN(actionTypeNum)) {
-        const actionString = UserAction[actionTypeNum];
-        const id = actionString;
-        const button = <button key={actionTypeNum} id={id} type='button' className={`btn btn-primary App-button`}
-          onClick={(event) => this.onButtonClicked('userAction', actionString, event)}>
-          {actionString}
-        </button>
-        result.push(button);
-      }
-    }
+  getTimers<Type>(arg: Type, clickGroup: string, state: PetState): any {
+    const valueDisplays: any[] = [];
+    const indices: any[] = getEnumIndices(arg);
+    indices.forEach(index => {
+      const val = state.timers[index];
+      const display = <PieTimerDisplay key={val.name} name={val.name} percent={val.percent} clicked={(name, percent) => console.log(name, percent)}/>
+      valueDisplays.push(display);
+    });
+    let result: any = <div className='TimerContainer'>
+      <div className='TimerContainerHeader'>{clickGroup}</div>
+      {valueDisplays}
+    </div>
+    return result;
+  }
+
+  getEnumButtons<Type>(arg: Type, clickGroup: string): any {
+    const buttons: any[] = [];
+    const labels: string[] = getEnumLabels(arg);
+    labels.forEach(label => {
+      const button = <button key={label} id={label} type='button' className={`btn btn-primary App-button`}
+        onClick={(event) => this.onButtonClicked(clickGroup, label, event)}>
+        {label}
+      </button>
+      buttons.push(button);
+    });
+    let result: any = <div className='ButtonContainer'>
+      <div className='ButtonContainerHeader'>{clickGroup}</div>
+      {buttons}
+    </div>
     return result;
   }
 
   render() {
-
-    const width = 800;
-    const height = 600;
-    const maxLoneliness = this.props.petStateRanges.max.loneliness;
-    const lonelinessRect = { x: 10, y: 10, width: 200 * (this.state.loneliness / maxLoneliness), height: 10 };
-    const fillDefault: string = "#C7F2E4";
-    // const fillNone = 'none';
-    // let fill = fillDefault;
-    const stroke = '#FFFFFF';
-    // const fuelFill = 'none'; //'#cdb2df';
-    const timer = this.props.petState.timers[TimerType.LAST_INTERACTION];
-    const lastInteractionPercent = timer.percent;
-
     return (
       <div className='PetGameCanvas'>
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ border: '1px solid black' }}>
-          <rect stroke={stroke} fill={fillDefault} x={lonelinessRect.x} y={lonelinessRect.y} width={lonelinessRect.width} height={lonelinessRect.height} />
-          <text x={100} y={220} style={{
-            fontSize: '13px',
-            fontFamily: 'helvetica',
-            fill: '#FFFFFF'
-          }} >LAST_INTERACTION</text>
-          <PieMeter name={'LAST_INTERACTION'} x={100} y={100} width={100} height={100} fill={'#FFFFFF'} percent={lastInteractionPercent} clicked={(data) => console.log(data)} />
-        </svg>
-        <div>
-          {this.getUserEventButtons()}
+        <div className='PetGameCanvasCol1'>
+          {this.getTimers(TimerType, 'timers', this.state.petState)}
         </div>
-        <div>
-          {this.getUserActionButtons()}
+        <div className='PetGameCanvasCol2'>
+          {this.getNeedValues(PetNeed, 'needs', this.state.petState)}
         </div>
-
+        <div className='PetGameCanvasCol3'>
+          {this.getEnumButtons(UserEvent, 'userEvent')}
+          {this.getEnumButtons(UserAction, 'userAction')}
+          {this.getEnumButtons(Emotion, 'petEmotion')}
+          {this.getEnumButtons(Intent, 'petIntent')}
+          {this.getEnumButtons(RelationshipLevel, 'relationshipLevel')}
+        </div>
       </div>
     );
   }

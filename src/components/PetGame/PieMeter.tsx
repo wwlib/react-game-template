@@ -1,7 +1,4 @@
 import React from 'react';
-import './PieMeter.css';
-
-
 
 const getCoordinatesForPercent = (percent) => {
     const x = Math.cos(2 * Math.PI * percent);
@@ -9,13 +6,15 @@ const getCoordinatesForPercent = (percent) => {
     return [x, y];
 }
 
+// see: https://medium.com/hackernoon/a-simple-pie-chart-in-svg-dbdd653b6936
+
 const pieMeter = (props: any) => {
     const fill = props.fill || "#C7F2E4";
     const x = props.x || 10;
     const y = props.y || 10;
     const width = props.width || 100;
     const height = props.height || 100;
-    const percent = props.percent || 1.0;
+    const percent = props.percent;
     let cumulativePercent = 0;
     const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
     cumulativePercent += percent;
@@ -29,16 +28,14 @@ const pieMeter = (props: any) => {
 
     const onClick = (event) => {
         if (props.clicked) {
-            props.clicked(props.name, event);
+            props.clicked(props.name, percent, event);
         }
     }
-
-    // <div className='PieMeter' onClick={(event) => props.clicked(props.name, event)}>
 
     return (
         <svg
             viewBox={'-1 -1 2 2'}
-            x={x} y={y} width={width} height={height}
+            width={width} height={height}
             onClick={onClick}
         >
             <circle stroke={'none'} fill={'#666666'} cx='0' cy='0' r='1'/>

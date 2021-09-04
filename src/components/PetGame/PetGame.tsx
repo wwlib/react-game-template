@@ -3,7 +3,7 @@ import * as React from "react";
 import './PetGame.css';
 import Model from '../../model/Model';
 import { GameStatus } from '../../model/GameController';
-import PetController, { Emotion, PetState, PetStateRanges, RelationshipLevel } from '../../model/PetController';
+import PetController, { Emotion, PetState, RelationshipLevel } from '../../model/PetController';
 import Log from '../../utils/Log';
 
 import Checkbox from '../Checkbox/Checkbox';
@@ -22,7 +22,6 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
   public log: Log;
 
   private _mainLoopInterval: NodeJS.Timeout;
-  private _stateRanges: PetStateRanges;
 
   constructor(props: PetGameProps) {
     super(props);
@@ -34,17 +33,17 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
     } else {
       this.state = {
         petState: {
+          userId: '',
           userName: '',
           userRelationshipLevel: RelationshipLevel.NONE,
           emotionalState: Emotion.CONTENT,
-          loneliness: 0,
+          needs: {},
           timers: {},
           gameStatus: GameStatus.INVALID,
+          intentQueue: [],
         }
       }
     }
-    console.log(this.state);
-    this._stateRanges = (this.props.model.gameController as PetController).stateRanges;
   }
 
   componentWillMount() {
@@ -75,7 +74,7 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
   }
 
   onButtonClicked = (action: string, event: any) => {
-    // console.log(`onButtonClicked: ${action}`);
+    // console.log(`PetGame: onButtonClicked:`, action);
     event.preventDefault();
 
     switch (action) {
@@ -84,6 +83,11 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
         this.props.model.resetGame('PetGame');
         break;
     }
+  }
+
+  onGameCanvasClick = (group: string, action: string) => {
+    const petController: PetController =  this.props.model.gameController as PetController;
+    petController.onGameCanvasClick(group, action);
   }
 
   onChangeHandler = (event: any) => {
@@ -146,17 +150,16 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
 
   render() {
     const gameStateData = {
+      userId: this.state.petState.userId,
       userName: this.state.petState.userName,
       userRelationshipLevel: RelationshipLevel[this.state.petState.userRelationshipLevel],
       gameStatus: GameStatus[this.state.petState.gameStatus],
       emotionalState: Emotion[this.state.petState.emotionalState],
-      loneliness: this.state.petState.loneliness,
-      timers: this.state.petState.timers,
     }
     const gameStateText = JSON.stringify(gameStateData, null, 2);
     return (
       <div className='PetGame' >
-        <PetGameCanvas petState={this.state.petState} petStateRanges={this._stateRanges} />
+        <PetGameCanvas petState={this.state.petState} clicked={this.onGameCanvasClick}/>
         <div id='PetGameControls'>
           <textarea className="KeyStatus" value={gameStateText} readOnly rows={30} />
           {/* <Checkbox label={'AutoPilot'} isChecked={this.state.autoPilotRunning} changed={(isChecked) => this.onCheckboxHandler('AutoPilot', isChecked)} /> */}

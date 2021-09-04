@@ -1,0 +1,14 @@
+.BarValueDisplay {
+    color: white;
+    box-sizing: unset;
+    display: flex;
+    flex-direction: column;
+}
+
+.BarValueDisplayMeter {
+    display: block;
+}
+
+.BarValueDisplayMeter svg {
+    box-sizing: unset;
+}

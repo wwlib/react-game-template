@@ -100,7 +100,7 @@ export default class BehaviorTreeFactory {
         const Exec_ac0168f1 = new BehaviorClasses.ExecuteScript({
             name: 'VThrustOn',
             exec: () => {
-                console.log(`VThrustOn`);
+                // console.log(`VThrustOn`);
                 blackboard.keys.ArrowUp = 'down';
             },
             id: 'ac0168f1-a455-4377-8d79-ef42b45e02cc',
@@ -187,7 +187,7 @@ export default class BehaviorTreeFactory {
                 }
 
                 notepad.target.velocity.x = hOffset / 50;
-                console.log(`target: (${notepad.target.x}, ${notepad.target.y}) <${notepad.target.velocity.x}, ${notepad.target.velocity.y}>`);
+                // console.log(`target: (${notepad.target.x}, ${notepad.target.y}) <${notepad.target.velocity.x}, ${notepad.target.velocity.y}>`);
                 const shipAltitude = notepad.target.y - blackboard.controller.shipCoords.y;
                 notepad.target.velocity.y = -10;
 
@@ -204,7 +204,7 @@ export default class BehaviorTreeFactory {
                 notepad.hCooldownTime = shipAltitude;
                 notepad.vCooldownTime = shipAltitude;
                 notepad.tCooldownTime = shipAltitude;
-                console.log(`  vCool: ${notepad.vCooldownTime}: hCool: ${notepad.hCooldownTime} `);
+                // console.log(`  vCool: ${notepad.vCooldownTime}: hCool: ${notepad.hCooldownTime} `);
             },
             id: '5e7005b5-b1f0-4a2a-ba6c-2f95cf8808be',
             layout: { "x": 931, "y": 499 },
@@ -233,7 +233,7 @@ export default class BehaviorTreeFactory {
                     hold = true;
                 }
 
-                console.log(`  VThrustHold: ${hold}: ${vShip} ${vTarget}`);
+                // console.log(`  VThrustHold: ${hold}: ${vShip} ${vTarget}`);
                 return hold;
             },
             id: '7d9c2ef7-cbbe-423c-b6a8-b329ec48db20',
