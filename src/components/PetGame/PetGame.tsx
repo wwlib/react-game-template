@@ -3,10 +3,10 @@ import * as React from "react";
 import './PetGame.css';
 import Model from '../../model/Model';
 import { GameStatus } from '../../model/GameController';
-import PetController, { Emotion, PetState, RelationshipLevel } from '../../model/PetController';
+import PetController, { Action, Emotion, PetState, RelationshipLevel, NeedControllerEvent, NeedControllerEventType } from '../../model/PetController';
 import Log from '../../utils/Log';
 
-import Checkbox from '../Checkbox/Checkbox';
+// import Checkbox from '../Checkbox/Checkbox';
 import PetGameCanvas from './PetGameCanvas';
 
 export interface PetGameProps {
@@ -15,6 +15,8 @@ export interface PetGameProps {
 
 export interface PetGameState {
   petState: PetState;
+  chatInput: string;
+  chatOutput: string;
 }
 
 export default class PetGame extends React.Component<PetGameProps, PetGameState> {
@@ -29,6 +31,8 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
     if (gameState) {
       this.state = {
         petState: gameState,
+        chatInput: '',
+        chatOutput: '',
       }
     } else {
       this.state = {
@@ -37,22 +41,34 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
           userName: '',
           userRelationshipLevel: RelationshipLevel.NONE,
           emotionalState: Emotion.CONTENT,
-          needs: {},
-          timers: {},
+          personality: {
+            extraversion: 1.0,
+            agreeableness: 1.0,
+            openness: 1.0,
+            conscientiousness: 1.0,
+            neuroticism: 1.0,
+          },
+          needs: [],
+          timers: [],
           gameStatus: GameStatus.INVALID,
           intentQueue: [],
-        }
+        },
+        chatInput: '',
+        chatOutput: '',
       }
     }
   }
 
   componentWillMount() {
     // this.props.model.resetGame('PetGame');
+    console.log(`PetGame: gameController:`, this.props.model.gameController);
     this._mainLoopInterval = setInterval(this.mainLoop, 100);
+    this.props.model.gameController.addListener('action', this.onGameControllerAction);
   }
 
   componentWillUnmount() {
     clearInterval(this._mainLoopInterval);
+    this.props.model.gameController.removeListener('action', this.onGameControllerAction);
   }
 
   // componentDidMount() {}
@@ -64,6 +80,13 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
   //     });
   //   }
   // }
+
+  onGameControllerAction = (action: Action) => {
+    console.log(action);
+    this.setState({
+      chatOutput: this.state.chatOutput + action.data.message + '\n\n',
+    });
+  }
 
   onKeyPress = (event: any) => {
     // event.preventDefault();
@@ -86,8 +109,14 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
   }
 
   onGameCanvasClick = (group: string, action: string) => {
-    const petController: PetController =  this.props.model.gameController as PetController;
-    petController.onGameCanvasClick(group, action);
+    const petController: PetController = this.props.model.gameController as PetController;
+    switch (group) {
+      case 'needControllerEventType':
+        console.log(`onGameCanvasClick: group: userEventType, action:`, action);
+        const userEvent: NeedControllerEvent = new NeedControllerEvent(NeedControllerEventType[action], action);
+        petController.onNeedControllerEvent(userEvent);
+        break;
+    }
   }
 
   onChangeHandler = (event: any) => {
@@ -155,18 +184,20 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
       userRelationshipLevel: RelationshipLevel[this.state.petState.userRelationshipLevel],
       gameStatus: GameStatus[this.state.petState.gameStatus],
       emotionalState: Emotion[this.state.petState.emotionalState],
+      personality: this.state.petState.personality,
     }
     const gameStateText = JSON.stringify(gameStateData, null, 2);
     return (
       <div className='PetGame' >
-        <PetGameCanvas petState={this.state.petState} clicked={this.onGameCanvasClick}/>
+        <PetGameCanvas petState={this.state.petState} clicked={this.onGameCanvasClick} />
         <div id='PetGameControls'>
-          <textarea className="KeyStatus" value={gameStateText} readOnly rows={30} />
+          <textarea className="KeyStatus" value={gameStateText} readOnly rows={16} />
           {/* <Checkbox label={'AutoPilot'} isChecked={this.state.autoPilotRunning} changed={(isChecked) => this.onCheckboxHandler('AutoPilot', isChecked)} /> */}
           <button id='btnReset' type='button' className={`btn btn-primary App-button`}
             onClick={(event) => this.onButtonClicked(`btnReset`, event)}>
             Reset
           </button>
+          <textarea className="ChatOutput" value={this.state.chatOutput} readOnly rows={20} />
         </div>
       </div>
     );

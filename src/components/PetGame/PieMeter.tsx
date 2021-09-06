@@ -10,8 +10,6 @@ const getCoordinatesForPercent = (percent) => {
 
 const pieMeter = (props: any) => {
     const fill = props.fill || "#C7F2E4";
-    const x = props.x || 10;
-    const y = props.y || 10;
     const width = props.width || 100;
     const height = props.height || 100;
     const percent = props.percent;

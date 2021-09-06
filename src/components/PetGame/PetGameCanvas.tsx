@@ -2,9 +2,8 @@ import * as React from "react";
 import './PetGame.css';
 import Log from '../../utils/Log';
 
-import Timer from '../../utils/Timer';
-import { getEnumLabels, getEnumLabelsAndIndices, getEnumIndices } from '../../utils/Utils';
-import { PetState, TimerType, UserAction, UserEvent, Emotion, Intent, RelationshipLevel, PetNeed, PetValue } from '../../model/PetController';
+import { getEnumLabels } from '../../utils/Utils';
+import { PetState, NeedControllerEventType, Emotion, IntentType, RelationshipLevel } from '../../model/PetController';
 import PieTimerDisplay from './PieTimerDisplay';
 import BarValueDisplay from './BarValueDisplay';
 
@@ -115,12 +114,10 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
   handleDragOver(event: any) {
   }
 
-  getNeedValues<Type>(arg: Type, clickGroup: string, state: PetState): any {
+  getNeedValues(clickGroup: string, state: PetState): any {
     const valueDisplays: any[] = [];
-    const indices: any[] = getEnumIndices(arg);
-    indices.forEach(index => {
-      const val = state.needs[index];
-      const display = <BarValueDisplay key={val.name} name={val.name} percent={val.percent} clicked={(name, percent) => console.log(name, percent)}/>
+    state.needs.forEach(need => {
+      const display = <BarValueDisplay key={need.name} name={`${need.name} - ${need.urgency}`} percent={need.percent} urgency={need.urgency} clicked={(name, percent) => console.log(name, percent)}/>
       valueDisplays.push(display);
     });
     let result: any = <div className='ValueContainer'>
@@ -130,12 +127,10 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
     return result;
   }
 
-  getTimers<Type>(arg: Type, clickGroup: string, state: PetState): any {
+  getTimers(clickGroup: string, state: PetState): any {
     const valueDisplays: any[] = [];
-    const indices: any[] = getEnumIndices(arg);
-    indices.forEach(index => {
-      const val = state.timers[index];
-      const display = <PieTimerDisplay key={val.name} name={val.name} percent={val.percent} clicked={(name, percent) => console.log(name, percent)}/>
+    state.timers.forEach(timer => {
+      const display = <PieTimerDisplay key={timer.name} name={timer.name} percent={timer.percent} clicked={(name, percent) => console.log(name, percent)}/>
       valueDisplays.push(display);
     });
     let result: any = <div className='TimerContainer'>
@@ -166,16 +161,15 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
     return (
       <div className='PetGameCanvas'>
         <div className='PetGameCanvasCol1'>
-          {this.getTimers(TimerType, 'timers', this.state.petState)}
+          {this.getTimers('timers', this.state.petState)}
         </div>
         <div className='PetGameCanvasCol2'>
-          {this.getNeedValues(PetNeed, 'needs', this.state.petState)}
+          {this.getNeedValues('needs', this.state.petState)}
         </div>
         <div className='PetGameCanvasCol3'>
-          {this.getEnumButtons(UserEvent, 'userEvent')}
-          {this.getEnumButtons(UserAction, 'userAction')}
+          {this.getEnumButtons(NeedControllerEventType, 'needControllerEventType')}
           {this.getEnumButtons(Emotion, 'petEmotion')}
-          {this.getEnumButtons(Intent, 'petIntent')}
+          {this.getEnumButtons(IntentType, 'petIntent')}
           {this.getEnumButtons(RelationshipLevel, 'relationshipLevel')}
         </div>
       </div>

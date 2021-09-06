@@ -91,3 +91,10 @@
   color: white;
   background-color: #333333;
 }
+
+.ChatOutput {
+  font-size: small;
+  min-width: 200px;
+  color: white;
+  background-color: #333333;
+}
