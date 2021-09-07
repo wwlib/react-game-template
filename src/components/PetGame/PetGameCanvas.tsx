@@ -117,7 +117,16 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
   getNeedValues(clickGroup: string, state: PetState): any {
     const valueDisplays: any[] = [];
     state.needs.forEach(need => {
-      const display = <BarValueDisplay key={need.name} name={`${need.name} - ${need.urgency}`} percent={need.percent} urgency={need.urgency} clicked={(name, percent) => console.log(name, percent)}/>
+      const needBar = <BarValueDisplay key={need.name} name={`${need.name} - ${need.urgency}`} percent={need.percent} urgency={need.urgency} clicked={(name, percent) => console.log(name, percent)}/>
+      let cooldownBar = null;
+      if (need.cooldown) {
+        const cooldown = need.cooldown;
+        cooldownBar = <BarValueDisplay key={cooldown.name} name={`${cooldown.name}`} percent={cooldown.percent} urgency={need.urgency} clicked={(name, percent) => console.log(name, percent)}/>
+      }
+      const display = <div className='ValueBarGroup'>
+        {needBar}
+        {cooldownBar}
+      </div>
       valueDisplays.push(display);
     });
     let result: any = <div className='ValueContainer'>

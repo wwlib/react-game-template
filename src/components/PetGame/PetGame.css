@@ -76,6 +76,10 @@
   color: white;
 }
 
+.ValueBarGroup {
+  margin-bottom: 30px;
+}
+
 .TimerContainer {
   padding: 6px;
   padding-bottom: 12px;

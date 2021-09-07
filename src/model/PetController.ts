@@ -150,6 +150,10 @@ export class Relationship {
     }
 }
 
+// TODO trigger more actions based on need events
+// i.e. DETECTED -> "Is that you?"
+// moderated by Personality & RelationshipLevel
+
 // Mazlo'shierarchy of needs: 
 // - physiological (food and clothing)
 // - safety (job security)
@@ -180,18 +184,33 @@ export interface NeedMessage {
 
 export abstract class NeedController {
 
+    protected _type: NeedType;
     protected _value: number;
     protected _urgency: NeedUrgency;
     protected _actionQueue: Action[];
     protected _relationship: Relationship;
     protected _personality: Personality;
+    protected _cooldown: Timer;
+    protected _cooldownThresholds: any;
 
-    constructor(value: number, personality: Personality, relationship: Relationship) {
+    constructor(type: NeedType, value: number, personality: Personality, relationship: Relationship) {
         this._value = value;
+        this._type = type;
         this._personality = personality;
         this._relationship = relationship;
         this._urgency = NeedUrgency.NONE;
         this._actionQueue = [];
+
+        let cooldownName: string = `${NeedType[this.type]}_ACTION_COOLDOWN`
+        this._cooldown = new Timer(cooldownName).start();
+        // re: conscientousness: a measure of self-restraint. If < 0, cooldown times are shorter - more demanding
+        this._cooldownThresholds = {
+            0: 600000 * this._personality.conscientiousness, // NONE
+            1: 60000 * this._personality.conscientiousness,  // LOW
+            2: 30000 * this._personality.conscientiousness,  // MEDIUM
+            3: 15000 * this._personality.conscientiousness,  // HIGH
+            4: 5000 * this._personality.conscientiousness,   // EMERGENCY
+        }
     }
 
     get value(): number {
@@ -206,7 +225,9 @@ export abstract class NeedController {
         return this._value;
     }
 
-    abstract get type(): any;
+    get type(): NeedType {
+        return this._type;
+    }
 
     abstract onMessage(message: NeedMessage): void;
 
@@ -230,29 +251,14 @@ export abstract class NeedController {
 export class NeedPhysiologyController extends NeedController {
 
     private _energyRemaining: Timer;
-    private _cooldown: Timer;
-    private _cooldownThresholds: any;
 
     constructor(value: number, personality: Personality, relationship: Relationship) {
-        super(value, personality, relationship);
+        super(NeedType.PHYSIOLOGY, value, personality, relationship);
         const options: TimerOptions = {
-            maxTime: 60000,
+            maxTime: 180000,
             mode: TimerMode.COUNT_DOWN,
         }
         this._energyRemaining = new Timer('ENERGY_REMAINING', options).start();
-        this._cooldown = new Timer('NEED_PHYSIOLOGY_COOLDOWN').start();
-        // re: conscientousness: a measure of self-restraint. If < 0, cooldown times are shorter - more demanding
-        this._cooldownThresholds = {
-            0: 600000 * this._personality.conscientiousness, // NONE
-            1: 60000 * this._personality.conscientiousness,  // LOW
-            2: 30000 * this._personality.conscientiousness,  // MEDIUM
-            3: 15000 * this._personality.conscientiousness,  // HIGH
-            4: 5000 * this._personality.conscientiousness,   // EMERGENCY
-        }
-    }
-
-    get type(): NeedType {
-        return NeedType.PHYSIOLOGY;
     }
 
     get value(): number {
@@ -267,9 +273,13 @@ export class NeedPhysiologyController extends NeedController {
     }
 
     get json(): any {
+        const cooldownThreshold: number = this._cooldownThresholds[this.urgency];
+        const cooldownPercent: number = Math.min(this._cooldown.elapsedTime / cooldownThreshold);
+
         return {
             name: this.name, value: this.value, percent: this.percent, urgency: NeedUrgency[this._urgency],
-            energyRemaining: this._energyRemaining.json
+            energyRemaining: this._energyRemaining.json,
+            cooldown: { name: this._cooldown.name, percent: cooldownPercent },
         }
     }
 
@@ -279,7 +289,7 @@ export class NeedPhysiologyController extends NeedController {
 
     onNeedControllerEvent(needControllerEvent: NeedControllerEvent): boolean {
         let handled: boolean = false;
-        console.log(`NeedPhysiologyController: onNeedControllerEvent: ${NeedControllerEventType[needControllerEvent.type]}, message: ${needControllerEvent.message}`);
+        // console.log(`NeedPhysiologyController: onNeedControllerEvent: ${NeedControllerEventType[needControllerEvent.type]}, message: ${needControllerEvent.message}`);
         switch (needControllerEvent.type) {
             case NeedControllerEventType.RECHARGE:
                 this._energyRemaining.restart();
@@ -319,6 +329,7 @@ export class NeedPhysiologyController extends NeedController {
         }
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
+            this._cooldown.restart();
         }
         return action;
     }
@@ -326,8 +337,8 @@ export class NeedPhysiologyController extends NeedController {
 
 export class NeedSafetyController extends NeedController {
 
-    get type(): NeedType {
-        return NeedType.SAFETY;
+    constructor(value: number, personality: Personality, relationship: Relationship) {
+        super(NeedType.SAFETY, value, personality, relationship);
     }
 
     onMessage(message: NeedMessage): void {
@@ -335,7 +346,7 @@ export class NeedSafetyController extends NeedController {
     }
 
     onNeedControllerEvent(needControllerEvent: NeedControllerEvent): boolean {
-        console.log(`NeedSafetyController: onNeedControllerEvent: ${NeedControllerEventType[needControllerEvent.type]}, message: ${needControllerEvent.message}`);
+        // console.log(`NeedSafetyController: onNeedControllerEvent: ${NeedControllerEventType[needControllerEvent.type]}, message: ${needControllerEvent.message}`);
         return false;
     }
 
@@ -344,6 +355,7 @@ export class NeedSafetyController extends NeedController {
 
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
+            this._cooldown.restart();
         }
         return action;
     }
@@ -354,16 +366,12 @@ export class NeedLoveController extends NeedController {
     private _lastInteraction: Timer;
 
     constructor(value: number, personality: Personality, relationship: Relationship) {
-        super(value, personality, relationship);
+        super(NeedType.LOVE, value, personality, relationship);
         const options: TimerOptions = {
             maxTime: 60000,
             mode: TimerMode.COUNT_UP,
         }
         this._lastInteraction = new Timer('LAST_INTERACTION', options).start();
-    }
-
-    get type(): NeedType {
-        return NeedType.LOVE;
     }
 
     get value(): number {
@@ -377,9 +385,12 @@ export class NeedLoveController extends NeedController {
     }
 
     get json(): any {
+        const cooldownThreshold: number = this._cooldownThresholds[this.urgency];
+        const cooldownPercent: number = Math.min(this._cooldown.elapsedTime / cooldownThreshold);
         return {
             name: this.name, value: this.value, percent: this.percent, urgency: NeedUrgency[this._urgency],
-            lastInteraction: this._lastInteraction.json
+            lastInteraction: this._lastInteraction.json,
+            cooldown: { name: this._cooldown.name, percent: cooldownPercent },
         }
     }
 
@@ -402,6 +413,23 @@ export class NeedLoveController extends NeedController {
                 this.queueAction(new Action(ActionType.SAY, { message: `Hi, ${this._relationship.user.name}!` }, this.type, this.urgency));
                 handled = true;
                 break;
+            case NeedControllerEventType.DETECTED:
+            case NeedControllerEventType.RECOGNIZED:
+                console.log(` DETECTED || RECOGNIZED`, NeedUrgency[this.urgency]);
+                if (this.urgency >= NeedUrgency.MEDIUM) {
+                    let cooldownThreshold = this._cooldownThresholds[this.urgency];
+                    let elapsedTime = this._cooldown.elapsedTime;
+                    console.log(`   cooldownThreshold: ${cooldownThreshold}, elapsedTime: ${elapsedTime}`);
+                    if (elapsedTime >= cooldownThreshold) {
+                        if (needControllerEvent.type === NeedControllerEventType.RECOGNIZED) {
+                            this.queueAction(new Action(ActionType.SAY, { message: `Hey ${this._relationship.user.name}. It's nice to see you.` }, this.type, this.urgency));
+                        } else {
+                            this.queueAction(new Action(ActionType.SAY, { message: `Hey there.` }, this.type, this.urgency));
+                        }
+                        handled = true;
+                    }
+                }
+                break;
         }
         return handled;
     }
@@ -411,6 +439,7 @@ export class NeedLoveController extends NeedController {
 
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
+            this._cooldown.restart();
         }
         return action;
     }
@@ -421,16 +450,12 @@ export class NeedEsteemController extends NeedController {
     private _lastEsteem: Timer;
 
     constructor(value: number, personality: Personality, relationship: Relationship) {
-        super(value, personality, relationship);
+        super(NeedType.ESTEEM, value, personality, relationship);
         const options: TimerOptions = {
             maxTime: 60000,
             mode: TimerMode.COUNT_UP,
         }
         this._lastEsteem = new Timer('LAST_ESTEEM', options).start();
-    }
-
-    get type(): NeedType {
-        return NeedType.ESTEEM;
     }
 
     get value(): number {
@@ -456,7 +481,7 @@ export class NeedEsteemController extends NeedController {
 
     onNeedControllerEvent(needControllerEvent: NeedControllerEvent): boolean {
         let handled: boolean = false;
-        console.log(`NeedEsteemController: onNeedControllerEvent: ${NeedControllerEventType[needControllerEvent.type]}, message: ${needControllerEvent.message}`);
+        // console.log(`NeedEsteemController: onNeedControllerEvent: ${NeedControllerEventType[needControllerEvent.type]}, message: ${needControllerEvent.message}`);
         switch (needControllerEvent.type) {
             case NeedControllerEventType.ASK_QUESTION:
                 this._lastEsteem.restart();
@@ -472,6 +497,7 @@ export class NeedEsteemController extends NeedController {
 
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
+            this._cooldown.restart();
         }
         return action;
     }
@@ -482,7 +508,7 @@ export class NeedSelfActualizationController extends NeedController {
     private _lastSelfActualization: Timer;
 
     constructor(value: number, personality: Personality, relationship: Relationship) {
-        super(value, personality, relationship);
+        super(NeedType.SELF_ACTUALIZATION, value, personality, relationship);
         const options: TimerOptions = {
             maxTime: 60000,
             mode: TimerMode.COUNT_UP,
@@ -507,16 +533,12 @@ export class NeedSelfActualizationController extends NeedController {
         }
     }
 
-    get type(): NeedType {
-        return NeedType.SELF_ACTUALIZATION;
-    }
-
     onMessage(message: NeedMessage): void {
 
     }
 
     onNeedControllerEvent(needControllerEvent: NeedControllerEvent): boolean {
-        console.log(`NeedSelfActualizationController: onNeedControllerEvent: onNeedControllerEvent: ${NeedControllerEventType[needControllerEvent.type]}, message: ${needControllerEvent.message}`);
+        // console.log(`NeedSelfActualizationController: onNeedControllerEvent: onNeedControllerEvent: ${NeedControllerEventType[needControllerEvent.type]}, message: ${needControllerEvent.message}`);
         let handled: boolean = false;
         switch (needControllerEvent.type) {
             case NeedControllerEventType.EARN_ACHIEVEMENT:
@@ -535,6 +557,7 @@ export class NeedSelfActualizationController extends NeedController {
 
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
+            this._cooldown.restart();
         }
         return action;
     }
@@ -630,7 +653,6 @@ export default class PetController extends GameController {
     }
 
     onNeedControllerEvent(needControllerEvent: NeedControllerEvent) {
-        console.log(`PetController:`, needControllerEvent);
         Array.from(this._needMap).forEach(element => {
             // const elementType: NeedType = element[0];
             // const name: string = NeedType[elementType];
@@ -640,11 +662,8 @@ export default class PetController extends GameController {
                 needControllerEvent.addHandledBy(need.type);
             }
         });
-        console.log(needControllerEvent);
+        // console.log(needControllerEvent);
     }
-
-    // TODO need system events like COMPLETE_QUEST, EARN_ACHIEVEMENT
-    // make UserEvent -> NeedControllerEvent with user and system categories
 
     update() {
         // update state for visualization and check for Actions

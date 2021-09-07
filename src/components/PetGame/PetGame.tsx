@@ -112,7 +112,7 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
     const petController: PetController = this.props.model.gameController as PetController;
     switch (group) {
       case 'needControllerEventType':
-        console.log(`onGameCanvasClick: group: userEventType, action:`, action);
+        // console.log(`onGameCanvasClick: group: userEventType, action:`, action);
         const userEvent: NeedControllerEvent = new NeedControllerEvent(NeedControllerEventType[action], action);
         petController.onNeedControllerEvent(userEvent);
         break;
