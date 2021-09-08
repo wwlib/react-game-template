@@ -3,7 +3,7 @@ import './PetGame.css';
 import Log from '../../utils/Log';
 
 import { getEnumLabels } from '../../utils/Utils';
-import { PetState, NeedControllerEventType, Emotion, IntentType, RelationshipLevel } from '../../model/PetController';
+import { PetState, NeedControllerEventType, Emotion, IntentType, RelationshipLevel, NeedUrgency } from '../../model/PetController';
 import PieTimerDisplay from './PieTimerDisplay';
 import BarValueDisplay from './BarValueDisplay';
 
@@ -117,15 +117,15 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
   getNeedValues(clickGroup: string, state: PetState): any {
     const valueDisplays: any[] = [];
     state.needs.forEach(need => {
-      const needBar = <BarValueDisplay key={need.name} name={`${need.name} - ${need.urgency}`} percent={need.percent} urgency={need.urgency} clicked={(name, percent) => console.log(name, percent)}/>
-      let cooldownBar = null;
-      if (need.cooldown) {
-        const cooldown = need.cooldown;
-        cooldownBar = <BarValueDisplay key={cooldown.name} name={`${cooldown.name}`} percent={cooldown.percent} urgency={need.urgency} clicked={(name, percent) => console.log(name, percent)}/>
+      const needBar = <BarValueDisplay key={need.name} name={`${need.name} - ${NeedUrgency[need.urgency]}`} percent={need.percent} urgency={need.urgency} clicked={(name, percent) => console.log(name, percent)}/>
+      let actionCooldownBar = null;
+      if (need.actionCooldown) {
+        const actionCooldown = need.actionCooldown;
+        actionCooldownBar = <BarValueDisplay key={actionCooldown.name} name={`${actionCooldown.name}`} percent={actionCooldown.percent} urgency={need.urgency} clicked={(name, percent) => console.log(name, percent)}/>
       }
-      const display = <div className='ValueBarGroup'>
+      const display = <div key={need.name} className='ValueBarGroup'>
         {needBar}
-        {cooldownBar}
+        {actionCooldownBar}
       </div>
       valueDisplays.push(display);
     });
@@ -137,14 +137,14 @@ export default class PetCanvas extends React.Component<PetCanvasProps, PetCanvas
   }
 
   getTimers(clickGroup: string, state: PetState): any {
-    const valueDisplays: any[] = [];
-    state.timers.forEach(timer => {
+    const timerDisplays: any[] = [];
+    state.visualizerData?.timers?.forEach(timer => {
       const display = <PieTimerDisplay key={timer.name} name={timer.name} percent={timer.percent} clicked={(name, percent) => console.log(name, percent)}/>
-      valueDisplays.push(display);
+      timerDisplays.push(display);
     });
     let result: any = <div className='TimerContainer'>
       <div className='TimerContainerHeader'>{clickGroup}</div>
-      {valueDisplays}
+      {timerDisplays}
     </div>
     return result;
   }

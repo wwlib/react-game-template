@@ -1,7 +1,6 @@
 import Timer, { TimerMode, TimerOptions } from '../utils/Timer';
-import GameController, { GameStatus } from './GameController';
+import GameController, { GameStatus, GameState } from './GameController';
 import Model from './Model';
-import { getEnumIndices } from '../utils/Utils';
 
 export enum Emotion {
     CONTENT,
@@ -59,6 +58,10 @@ export interface Personality {
     neuroticism: number;
 }
 
+export interface VisualizerData {
+    timers: any[];
+}
+
 export interface PetState {
     gameStatus: GameStatus;
     userId: string;
@@ -67,16 +70,15 @@ export interface PetState {
     emotionalState: Emotion;
     personality: Personality;
     needs: any[];
-    timers: any[];
-    intentQueue: IntentType[];
+    visualizerData?: VisualizerData;
 }
 
-export enum TimerType {
-    // LAST_DETECTION,
-    // LAST_RECOGNITION,
-    // LAST_INTERACTION_ATTEMPT,
-    // LAST_REJECTION,
-}
+// export enum TimerType {
+//     // LAST_DETECTION,
+//     // LAST_RECOGNITION,
+//     // LAST_INTERACTION_ATTEMPT,
+//     // LAST_REJECTION,
+// }
 
 export enum NeedControllerEventType {
     NONE,
@@ -150,6 +152,7 @@ export class Relationship {
     }
 }
 
+// TODO find a better way to share timer state with the visualizer
 // TODO trigger more actions based on need events
 // i.e. DETECTED -> "Is that you?"
 // moderated by Personality & RelationshipLevel
@@ -190,8 +193,8 @@ export abstract class NeedController {
     protected _actionQueue: Action[];
     protected _relationship: Relationship;
     protected _personality: Personality;
-    protected _cooldown: Timer;
-    protected _cooldownThresholds: any;
+    protected _actionCooldown: Timer;
+    protected _actionCooldownThresholds: any;
 
     constructor(type: NeedType, value: number, personality: Personality, relationship: Relationship) {
         this._value = value;
@@ -202,9 +205,9 @@ export abstract class NeedController {
         this._actionQueue = [];
 
         let cooldownName: string = `${NeedType[this.type]}_ACTION_COOLDOWN`
-        this._cooldown = new Timer(cooldownName).start();
+        this._actionCooldown = new Timer(cooldownName).start();
         // re: conscientousness: a measure of self-restraint. If < 0, cooldown times are shorter - more demanding
-        this._cooldownThresholds = {
+        this._actionCooldownThresholds = {
             0: 600000 * this._personality.conscientiousness, // NONE
             1: 60000 * this._personality.conscientiousness,  // LOW
             2: 30000 * this._personality.conscientiousness,  // MEDIUM
@@ -216,6 +219,12 @@ export abstract class NeedController {
     get value(): number {
         return this._value;
     }
+
+    abstract initWithData(data: any): void;
+
+    abstract get json(): any;
+
+    abstract getVisualizerData(): VisualizerData;
 
     get urgency(): number {
         return this._urgency;
@@ -241,10 +250,6 @@ export abstract class NeedController {
 
     get name(): string {
         return NeedType[this.type];
-    }
-
-    public get json(): any {
-        return { name: this.name, value: this.value, percent: this.percent, urgency: NeedUrgency[this._urgency] }
     }
 }
 
@@ -272,14 +277,29 @@ export class NeedPhysiologyController extends NeedController {
         return this._value;
     }
 
-    get json(): any {
-        const cooldownThreshold: number = this._cooldownThresholds[this.urgency];
-        const cooldownPercent: number = Math.min(this._cooldown.elapsedTime / cooldownThreshold);
+    initWithData(data: any) {
+        // console.log(`NeedPhysiologyController: initWithData:`, data);
+        this._value = data.value;
+        this._type = data.type;
+        this._urgency = data.urgency;
+        this._actionCooldown.maxTime = data.actionCooldown.max;
+        this._actionCooldown.startTime = data.actionCooldown.start;
+        this._energyRemaining.maxTime = data.energyRemaining.max;
+        this._energyRemaining.startTime = data.energyRemaining.start;
+    }
 
+    get json(): any {
+        this._actionCooldown.maxTime = this._actionCooldownThresholds[this.urgency];
         return {
-            name: this.name, value: this.value, percent: this.percent, urgency: NeedUrgency[this._urgency],
+            type: this.type, name: this.name, value: this.value, percent: this.percent, urgency: this._urgency,
             energyRemaining: this._energyRemaining.json,
-            cooldown: { name: this._cooldown.name, percent: cooldownPercent },
+            actionCooldown: this._actionCooldown.json,
+        }
+    }
+
+    getVisualizerData(): VisualizerData {
+        return {
+            timers: [this._energyRemaining.json],
         }
     }
 
@@ -303,10 +323,10 @@ export class NeedPhysiologyController extends NeedController {
 
     getAction(): Action | undefined {
         let action: Action | undefined = undefined;
-        let cooldownThreshold = this._cooldownThresholds[this.urgency];
-        let elapsedTime = this._cooldown.elapsedTime;
+        let cooldownThreshold = this._actionCooldownThresholds[this.urgency];
+        let elapsedTime = this._actionCooldown.elapsedTime;
         if (elapsedTime >= cooldownThreshold) {
-            console.log(`NeedPhysiologyController: getAction: checking...`, NeedUrgency[this.urgency], elapsedTime, cooldownThreshold);
+            // console.log(`NeedPhysiologyController: getAction: checking...`, NeedUrgency[this.urgency], elapsedTime, cooldownThreshold);
             switch (this.urgency) {
                 case NeedUrgency.NONE:
                     break;
@@ -323,13 +343,13 @@ export class NeedPhysiologyController extends NeedController {
                     action = new Action(ActionType.SAY, { message: 'Emergency! Recharge me, now, please!!' }, this.type, this.urgency);
                     break;
             }
-            this._cooldown.restart();
+            this._actionCooldown.restart();
         } else {
             // console.log(`NeedPhysiologyController: getAction: waiting for cooldown.`, NeedUrgency[this.urgency], cooldownThreshold);
         }
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
-            this._cooldown.restart();
+            this._actionCooldown.restart();
         }
         return action;
     }
@@ -339,6 +359,28 @@ export class NeedSafetyController extends NeedController {
 
     constructor(value: number, personality: Personality, relationship: Relationship) {
         super(NeedType.SAFETY, value, personality, relationship);
+    }
+
+    initWithData(data: any) {
+        this._value = data.value;
+        this._type = data.type;
+        this._urgency = data.urgency;
+        this._actionCooldown.maxTime = data.actionCooldown.max;
+        this._actionCooldown.startTime = data.actionCooldown.start;
+    }
+
+    get json(): any {
+        this._actionCooldown.maxTime = this._actionCooldownThresholds[this.urgency];
+        return {
+            type: this.type, name: this.name, value: this.value, percent: this.percent, urgency: this._urgency,
+            actionCooldown: this._actionCooldown.json,
+        }
+    }
+
+    getVisualizerData(): VisualizerData {
+        return {
+            timers: [],
+        }
     }
 
     onMessage(message: NeedMessage): void {
@@ -355,7 +397,7 @@ export class NeedSafetyController extends NeedController {
 
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
-            this._cooldown.restart();
+            this._actionCooldown.restart();
         }
         return action;
     }
@@ -384,13 +426,28 @@ export class NeedLoveController extends NeedController {
         return this._value;
     }
 
+    initWithData(data: any) {
+        this._value = data.value;
+        this._type = data.type;
+        this._urgency = data.urgency;
+        this._actionCooldown.maxTime = data.actionCooldown.max;
+        this._actionCooldown.startTime = data.actionCooldown.start;
+        this._lastInteraction.maxTime = data.lastInteraction.max;
+        this._lastInteraction.startTime = data.lastInteraction.start;
+    }
+
     get json(): any {
-        const cooldownThreshold: number = this._cooldownThresholds[this.urgency];
-        const cooldownPercent: number = Math.min(this._cooldown.elapsedTime / cooldownThreshold);
+        this._actionCooldown.maxTime = this._actionCooldownThresholds[this.urgency];
         return {
-            name: this.name, value: this.value, percent: this.percent, urgency: NeedUrgency[this._urgency],
+            type: this.type, name: this.name, value: this.value, percent: this.percent, urgency: this._urgency,
             lastInteraction: this._lastInteraction.json,
-            cooldown: { name: this._cooldown.name, percent: cooldownPercent },
+            actionCooldown: this._actionCooldown.json,
+        }
+    }
+
+    getVisualizerData(): VisualizerData {
+        return {
+            timers: [this._lastInteraction.json],
         }
     }
 
@@ -417,8 +474,8 @@ export class NeedLoveController extends NeedController {
             case NeedControllerEventType.RECOGNIZED:
                 console.log(` DETECTED || RECOGNIZED`, NeedUrgency[this.urgency]);
                 if (this.urgency >= NeedUrgency.MEDIUM) {
-                    let cooldownThreshold = this._cooldownThresholds[this.urgency];
-                    let elapsedTime = this._cooldown.elapsedTime;
+                    let cooldownThreshold = this._actionCooldownThresholds[this.urgency];
+                    let elapsedTime = this._actionCooldown.elapsedTime;
                     console.log(`   cooldownThreshold: ${cooldownThreshold}, elapsedTime: ${elapsedTime}`);
                     if (elapsedTime >= cooldownThreshold) {
                         if (needControllerEvent.type === NeedControllerEventType.RECOGNIZED) {
@@ -439,7 +496,7 @@ export class NeedLoveController extends NeedController {
 
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
-            this._cooldown.restart();
+            this._actionCooldown.restart();
         }
         return action;
     }
@@ -468,10 +525,28 @@ export class NeedEsteemController extends NeedController {
         return this._value;
     }
 
+    initWithData(data: any) {
+        this._value = data.value;
+        this._type = data.type;
+        this._urgency = data.urgency;
+        this._actionCooldown.maxTime = data.actionCooldown.max;
+        this._actionCooldown.startTime = data.actionCooldown.start;
+        this._lastEsteem.maxTime = data.lastEsteem.max;
+        this._lastEsteem.startTime = data.lastEsteem.start;
+    }
+
     get json(): any {
+        this._actionCooldown.maxTime = this._actionCooldownThresholds[this.urgency];
         return {
-            name: this.name, value: this.value, percent: this.percent, urgency: NeedUrgency[this._urgency],
-            lastEsteem: this._lastEsteem.json
+            type: this.type, name: this.name, value: this.value, percent: this.percent, urgency: this._urgency,
+            lastEsteem: this._lastEsteem.json,
+            actionCooldown: this._actionCooldown.json,
+        }
+    }
+
+    getVisualizerData(): VisualizerData {
+        return {
+            timers: [this._lastEsteem.json],
         }
     }
 
@@ -497,7 +572,7 @@ export class NeedEsteemController extends NeedController {
 
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
-            this._cooldown.restart();
+            this._actionCooldown.restart();
         }
         return action;
     }
@@ -526,10 +601,28 @@ export class NeedSelfActualizationController extends NeedController {
         return this._value;
     }
 
+    initWithData(data: any) {
+        this._value = data.value;
+        this._type = data.type;
+        this._urgency = data.urgency;
+        this._actionCooldown.maxTime = data.actionCooldown.max;
+        this._actionCooldown.startTime = data.actionCooldown.start;
+        this._lastSelfActualization.maxTime = data.lastSelfActualization.max;
+        this._lastSelfActualization.startTime = data.lastSelfActualization.start;
+    }
+
     get json(): any {
+        this._actionCooldown.maxTime = this._actionCooldownThresholds[this.urgency];
         return {
-            name: this.name, value: this.value, percent: this.percent, urgency: NeedUrgency[this._urgency],
-            lastSelfActualization: this._lastSelfActualization.json
+            type: this.type, name: this.name, value: this.value, percent: this.percent, urgency: this._urgency,
+            lastSelfActualization: this._lastSelfActualization.json,
+            actionCooldown: this._actionCooldown.json,
+        }
+    }
+
+    getVisualizerData(): VisualizerData {
+        return {
+            timers: [this._lastSelfActualization.json],
         }
     }
 
@@ -557,7 +650,7 @@ export class NeedSelfActualizationController extends NeedController {
 
         if (!action && this._actionQueue.length) {
             action = this._actionQueue.shift();
-            this._cooldown.restart();
+            this._actionCooldown.restart();
         }
         return action;
     }
@@ -567,26 +660,17 @@ export default class PetController extends GameController {
 
     private _emotionalState: Emotion;
     private _personality: Personality;
-    private _previousTime: number;
-    private _totalTime: number;
-    private _score: number;
-    private _rejectionHistory: number[];
 
-    private _petId: string;
-    private _pet: any;
-    private _intentQueue: IntentType[];
+    private _id: string;
     private _relationships: Relationship[];
 
     // needs
     private _needMap: Map<NeedType, NeedController>;
 
-    // timers
-    private _timerMap: Map<TimerType, Timer>;
-
     // state
     private _state: PetState;
 
-    constructor(model: Model, petId: string) {
+    constructor(model: Model, id: string, stateData?: PetState) {
         super(model);
         this._emotionalState = Emotion.CONTENT;
         this._personality = {
@@ -596,14 +680,8 @@ export default class PetController extends GameController {
             conscientiousness: 1.0,
             neuroticism: 0.2,
         }
-        this._petId = petId;
+        this._id = id;
 
-        this._previousTime = Date.now();
-        this._totalTime = 0;
-        this._score = 0;
-        this._rejectionHistory = [];
-
-        this._intentQueue = [];
         this._relationships = [];
         this.addRelationship(new User('001', 'Abigail'), RelationshipLevel.NONE);
 
@@ -614,14 +692,6 @@ export default class PetController extends GameController {
         this._needMap.set(NeedType.ESTEEM, new NeedEsteemController(0, this._personality, this._relationships[0]));
         this._needMap.set(NeedType.SELF_ACTUALIZATION, new NeedSelfActualizationController(0, this._personality, this._relationships[0]));
 
-
-        this._timerMap = new Map<TimerType, Timer>();
-        getEnumIndices(TimerType).forEach(index => {
-            const timer = new Timer(TimerType[index], { maxTime: 60000 });
-            timer.start();
-            this._timerMap.set(index, timer);
-        });
-
         this._state = {
             gameStatus: GameStatus.RUNNING,
             userId: this._relationships[0].user.id,
@@ -630,10 +700,54 @@ export default class PetController extends GameController {
             emotionalState: this._emotionalState,
             personality: this._personality,
             needs: [],
-            timers: [],
-            intentQueue: this._intentQueue,
+            visualizerData: {
+                timers: [],
+            },
         }
+
+        if (stateData) {
+            this.initWithData(stateData);
+        }
+
         this.update();
+    }
+
+    initWithData(state: PetState) {
+        // console.log(`initWithData:`);
+        this._gameStatus = state.gameStatus || this._gameStatus;
+        if (state.userId && state.userName) {
+            const user = new User(state.userId, state.userName);
+            this._relationships = [new Relationship(user, state.userRelationshipLevel)];
+        }
+        this._emotionalState = state.emotionalState || this._emotionalState;
+        this._personality = state.personality || this._personality;
+        if (state.needs) {
+            state.needs.forEach(needData => {
+                let needController: NeedController | undefined;
+                switch (needData.type) {
+                    case NeedType.PHYSIOLOGY:
+                        needController = this._needMap.get(NeedType.PHYSIOLOGY);// as NeedPhysiologyController;
+                        needController?.initWithData(needData);
+                        break;
+                    case NeedType.SAFETY:
+                        needController = this._needMap.get(NeedType.SAFETY);// as NeedPhysiologyController;
+                        needController?.initWithData(needData);
+                        break;
+                    case NeedType.LOVE:
+                        needController = this._needMap.get(NeedType.LOVE);// as NeedPhysiologyController;
+                        needController?.initWithData(needData);
+                        break;
+                    case NeedType.ESTEEM:
+                        needController = this._needMap.get(NeedType.ESTEEM);// as NeedPhysiologyController;
+                        needController?.initWithData(needData);
+                        break;
+                    case NeedType.SELF_ACTUALIZATION:
+                        needController = this._needMap.get(NeedType.SELF_ACTUALIZATION);// as NeedPhysiologyController;
+                        needController?.initWithData(needData);
+                        break;
+                }
+            });
+        }
     }
 
     get state(): any {
@@ -654,61 +768,36 @@ export default class PetController extends GameController {
 
     onNeedControllerEvent(needControllerEvent: NeedControllerEvent) {
         Array.from(this._needMap).forEach(element => {
-            // const elementType: NeedType = element[0];
-            // const name: string = NeedType[elementType];
             const need: NeedController = element[1];
             const handled: boolean = need.onNeedControllerEvent(needControllerEvent);
             if (handled) {
                 needControllerEvent.addHandledBy(need.type);
             }
         });
-        // console.log(needControllerEvent);
+        console.log(JSON.stringify(this._state, null, 2));
     }
 
-    update() {
-        // update state for visualization and check for Actions
+    update(options?: any): GameState {
+        // update state and check for Actions
+        // optional: include extra visualizer data
+        options = options || {};
+        const includeVisualizerData = options.includeVisualizerData || false;
         this._state.needs = [];
+        if (includeVisualizerData) {
+            this._state.visualizerData = { timers: [] };
+        }
         Array.from(this._needMap).forEach(element => {
-            // const elementType: NeedType = element[0];
-            // const name: string = NeedType[elementType];
             const need: NeedController = element[1];
             this._state.needs.push(need.json);
-
+            if (includeVisualizerData && this._state.visualizerData) {
+                this._state.visualizerData.timers = this._state.visualizerData?.timers.concat(need.getVisualizerData().timers);
+            }
             const action: Action | undefined = need.getAction();
             if (action) {
                 this.emit('action', action);
             }
         });
-
-        this._state.timers = [];
-        Array.from(this._timerMap).forEach(element => {
-            // const elementType: TimerType = element[0];
-            // const name: string = TimerType[elementType];
-            const timer: Timer = element[1];
-            this._state.timers.push(timer.json);
-        });
-
-        // add some timer data from needs
-        const needPhysiology: NeedPhysiologyController | undefined = this._needMap.get(NeedType.PHYSIOLOGY) as NeedPhysiologyController;
-        if (needPhysiology) {
-            const energyRemainingTimer = needPhysiology.json.energyRemaining;
-            this._state.timers.push(energyRemainingTimer);
-        }
-        const needLove: NeedLoveController | undefined = this._needMap.get(NeedType.LOVE) as NeedLoveController;
-        if (needLove) {
-            const lastInteractionTimer = needLove.json.lastInteraction;
-            this._state.timers.push(lastInteractionTimer);
-        }
-        const needEsteem: NeedEsteemController | undefined = this._needMap.get(NeedType.ESTEEM) as NeedEsteemController;
-        if (needEsteem) {
-            const lastEsteemTimer = needEsteem.json.lastEsteem;
-            this._state.timers.push(lastEsteemTimer);
-        }
-        const needSelfActualization: NeedSelfActualizationController | undefined = this._needMap.get(NeedType.SELF_ACTUALIZATION) as NeedSelfActualizationController;
-        if (needSelfActualization) {
-            const lastSelfActualizationTimer = needSelfActualization.json.lastSelfActualization;
-            this._state.timers.push(lastSelfActualizationTimer);
-        }
+        return this._state;
     }
 
     dispose() {

@@ -108,6 +108,22 @@ export default class App extends Component<AppProps, AppState> {
         }
     }
 
+    gameChanged = (action => {
+        switch (action) {
+            case 'btnReset':
+                this.setState({
+                    settings: this.props.model.config.json,
+                });
+                break;
+            case 'btnSave':
+                this.setState({
+                    settings: this.props.model.config.json,
+                });
+                break;
+        }
+
+    });
+
     getActiveTab(): any {
         let activeTab: any = null;
         switch (this.state.activeTab) {
@@ -127,7 +143,7 @@ export default class App extends Component<AppProps, AppState> {
                 break;
             case 'PetGame':
                 activeTab =
-                    <PetGame model={this.props.model}
+                    <PetGame model={this.props.model} changed={this.gameChanged}
                     />
                 break;
         }

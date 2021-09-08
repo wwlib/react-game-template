@@ -36,9 +36,10 @@ export default class LanderGame extends React.Component<LanderGameProps, LanderG
 
   constructor(props: LanderGameProps) {
     super(props);
-    const gameState = this.props.model.gameState;
+    const gameState = this.props.model.getGameState();
     if (gameState) {
-      this.state = this.props.model.gameState;
+      gameState.autoPilotRunning = this.props.model.autoPilot.running
+      this.state = gameState;
     } else {
       this.state = {
         shipCoords: { x: 0, y: 0 },
@@ -63,7 +64,6 @@ export default class LanderGame extends React.Component<LanderGameProps, LanderG
   }
 
   componentWillMount() {
-    // this.props.model.resetGame('LanderGame');
     this._mainLoopInterval = setInterval(this.mainLoop, 100);
   }
 
@@ -155,6 +155,7 @@ export default class LanderGame extends React.Component<LanderGameProps, LanderG
   mainLoop = () => {
     const gameState = this.props.model.update();
     if (gameState) {
+      gameState.autoPilotRunning = this.props.model.autoPilot.running;
       this.setState(gameState);
     }
   }

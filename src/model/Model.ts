@@ -36,20 +36,6 @@ export default class Model {
     window.addEventListener('focus', this.onFocus);
   }
 
-  get gameState(): any | undefined {
-    let state: any = undefined;
-    if (this.gameController) {
-      state = {};
-      Object.assign(state, this.gameController.state);
-      if (this.gameController instanceof LanderController) {
-        if (this.autoPilot) {
-          state.autoPilotRunning = this.autoPilot.running;
-        }
-      }
-    }
-    return state;
-  }
-
   onKeyDown = (e: KeyboardEvent) => {
     // console.log(e);
     const key: string = e.code;
@@ -166,7 +152,8 @@ export default class Model {
         this.autoPilot.start();
       }
     } else if (type === 'PetGame') {
-      this.gameController = new PetController(this, 'pet-1');
+      const stateData = this.config.PetGame;
+      this.gameController = new PetController(this, 'pet-1', stateData);
     }
   }
 
@@ -179,17 +166,38 @@ export default class Model {
     }
   }
 
-  update(): any {
+  copyGameState(state: any) {
+    let stateCopy: any = undefined;
+    if (state) {
+      stateCopy = {};
+      Object.assign(stateCopy, state);
+    }
+    return stateCopy;
+  }
+
+  getGameState(copy: boolean = false): any | undefined {
+    let state: any = undefined;
     if (this.gameController) {
-      this.gameController.update();
+      if (copy) {
+        state = this.copyGameState(this.gameController.state);
+      } else {
+        state = this.gameController.state
+      }
+    }
+    return state;
+  }
+
+  update(options?: any): any {
+    let state: any = undefined;
+    if (this.gameController) {
+      state = this.gameController.update(options);
       if (this.gameController.gameStatus === GameStatus.CRASHED || this.gameController.gameStatus === GameStatus.LANDED) {
         if (this.autoPilot) {
           this.autoPilot.running = false;
         }
       }
     }
-    // this.autoPilot?.update(); // autoPilot has its own update loop mechanism
-    return this.gameState;
+    return state;
   }
 
   dispose() {

@@ -1,5 +1,5 @@
 import Model from "./Model";
-import GameController, { GameStatus } from "./GameController";
+import GameController, { GameStatus, GameState } from "./GameController";
 
 export default class LanderController extends GameController {
 
@@ -69,11 +69,12 @@ export default class LanderController extends GameController {
         return this._score;
     }
 
-    update() {
+    update(options?: any): GameState {
         const currentTime = Date.now();
         const elapsedTime = currentTime - this._previousTime;
         this._previousTime = currentTime;
         this.mainLoop(elapsedTime);
+        return this.state;
     }
 
     mainLoop = (elapsedTime: number) => {
@@ -140,12 +141,10 @@ export default class LanderController extends GameController {
                         this._fuelBonus = this.shipFuel;
                         this._score = this._fuelBonus + this._timeBonus;
                     }
-                    // velocity = { x: 0, y: 0 };
                 }
             } else if (shipCoords.y >= (this._world.height - 40)) {
                 shipCoords.y = (this._world.height - 40);
                 newState = GameStatus.CRASHED;
-                // velocity = { x: 0, y: 0 };
             }
 
             this.shipCoords = shipCoords;

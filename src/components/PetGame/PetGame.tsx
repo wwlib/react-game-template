@@ -11,6 +11,7 @@ import PetGameCanvas from './PetGameCanvas';
 
 export interface PetGameProps {
   model: Model;
+  changed: any;
 }
 
 export interface PetGameState {
@@ -27,7 +28,7 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
 
   constructor(props: PetGameProps) {
     super(props);
-    const gameState = this.props.model.gameState;
+    const gameState = this.props.model.getGameState();
     if (gameState) {
       this.state = {
         petState: gameState,
@@ -49,9 +50,10 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
             neuroticism: 1.0,
           },
           needs: [],
-          timers: [],
+          visualizerData: {
+            timers: [],
+          },
           gameStatus: GameStatus.INVALID,
-          intentQueue: [],
         },
         chatInput: '',
         chatOutput: '',
@@ -60,7 +62,6 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
   }
 
   componentWillMount() {
-    // this.props.model.resetGame('PetGame');
     console.log(`PetGame: gameController:`, this.props.model.gameController);
     this._mainLoopInterval = setInterval(this.mainLoop, 100);
     this.props.model.gameController.addListener('action', this.onGameControllerAction);
@@ -82,7 +83,7 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
   // }
 
   onGameControllerAction = (action: Action) => {
-    console.log(action);
+    // console.log(action);
     this.setState({
       chatOutput: this.state.chatOutput + action.data.message + '\n\n',
     });
@@ -103,7 +104,15 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
     switch (action) {
       case 'btnReset':
         console.log(`onButtonClicked: btnReset`);
+        this.props.model.setAppParams({ PetGame: {} }); // clear saved data
         this.props.model.resetGame('PetGame');
+        this.props.changed('btnReset');
+        break;
+      case 'btnSave':
+        this.props.model.setAppParams({
+          PetGame: this.props.model.getGameState(true),
+        });
+        this.props.changed('btnSave');
         break;
     }
   }
@@ -171,7 +180,7 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
   }
 
   mainLoop = () => {
-    const gameState = this.props.model.update();
+    const gameState = this.props.model.update({ includeVisualizerData: true });
     if (gameState) {
       this.setState({ petState: gameState });
     }
@@ -193,6 +202,10 @@ export default class PetGame extends React.Component<PetGameProps, PetGameState>
         <div id='PetGameControls'>
           <textarea className="KeyStatus" value={gameStateText} readOnly rows={16} />
           {/* <Checkbox label={'AutoPilot'} isChecked={this.state.autoPilotRunning} changed={(isChecked) => this.onCheckboxHandler('AutoPilot', isChecked)} /> */}
+          <button id='btnSave' type='button' className={`btn btn-primary App-button`}
+            onClick={(event) => this.onButtonClicked(`btnSave`, event)}>
+            Save
+          </button>
           <button id='btnReset' type='button' className={`btn btn-primary App-button`}
             onClick={(event) => this.onButtonClicked(`btnReset`, event)}>
             Reset

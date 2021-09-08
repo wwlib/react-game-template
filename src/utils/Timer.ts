@@ -35,6 +35,10 @@ export default class Timer {
         return this._startTime;
     }
 
+    set startTime(value: number) {
+        this._startTime = value;
+    }
+
     get state(): TimerState {
         return this._state;
     }
@@ -101,6 +105,10 @@ export default class Timer {
     get elapsedTime() {
         this.update();
         return this._elapsedTime;
+    }
+
+    set elapsedTime(value: number) {
+        this._startTime = Date.now() - value;
     }
 
     get remainingTime() {

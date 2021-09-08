@@ -11,6 +11,10 @@ export enum GameStatus {
     OVER
 }
 
+export interface GameState {
+
+}
+
 export default abstract class GameController extends EventEmitter {
 
     protected _model: Model | undefined;
@@ -28,7 +32,7 @@ export default abstract class GameController extends EventEmitter {
 
     public abstract get state(): any;
 
-    public abstract update(): void;
+    public abstract update(options?: any): GameState; // should return the game's state
 
     public  dispose(): void {
         this.removeAllListeners();
