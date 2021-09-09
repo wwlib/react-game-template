@@ -1,0 +1,104 @@
+.PetGame {
+  width: 1024px;
+  height: 700px;
+  background-color: #282c34;
+  color: black;
+  display: flex;
+  flex-direction: row;
+}
+
+.PetGame label {
+  color: #cccccc;
+}
+
+.PetGameGroup {
+
+}
+
+.PetGameCanvas {
+  /* width: 800px;
+  height: 600px; */
+  display: flex;
+  flex-direction: row;
+  background-color: #222222;
+}
+
+.PetGameCanvasCol1 {
+  width: 300px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  background-color: #222222;
+}
+
+.PetGameCanvasCol2 {
+  width: 300px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  background-color: #222222;
+}
+
+.PetGameCanvasCol3 {
+  width: 300px;
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+  background-color: #222222;
+}
+
+.PetGameControls {
+  
+  display: flex;
+  flex-direction: column;
+}
+
+.ButtonContainer {
+  padding: 6px;
+  padding-bottom: 12px;
+}
+
+.ButtonContainer button {
+  /* padding: 3px; */
+  margin: 2px;
+}
+
+.ButtonContainerHeader {
+  color: white;
+}
+
+.ValueContainer {
+  padding: 6px;
+  padding-bottom: 12px;
+}
+
+.ValueContainerHeader {
+  color: white;
+}
+
+.ValueBarGroup {
+  margin-bottom: 30px;
+}
+
+.TimerContainer {
+  padding: 6px;
+  padding-bottom: 12px;
+}
+
+.TimerContainerHeader {
+  color: white;
+}
+
+.KeyStatus {
+  font-size: small;
+  min-width: 200px;
+  color: white;
+  background-color: #333333;
+}
+
+.ChatOutput {
+  font-size: small;
+  min-width: 200px;
+  color: white;
+  background-color: #333333;
+}

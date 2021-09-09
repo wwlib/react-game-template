@@ -2,7 +2,9 @@ import Log from '../utils/Log';
 import parentLog from './log';
 import GameConfig from './GameConfig';
 
-import GameController, { ShipState } from './GameController';
+import GameController, { GameStatus } from './GameController';
+import LanderController from './LanderController';
+import PetController from './PetController';
 import AutoPilot from './AutoPilot';
 
 export default class Model {
@@ -32,27 +34,6 @@ export default class Model {
     document.addEventListener('keydown', this.onKeyDown);
     document.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('focus', this.onFocus);
-  }
-
-  get gameState(): any {
-    const state: any = {
-      shipCoords: { x: 140, y: 140 },
-      shipVelocity: { x: 0, y: 0 },
-      shipThrust: { x: 0, y: 0 },
-      shipFuel: 200,
-      shipState: ShipState.FALLING,
-      gravity: { x: 0, y: -1 },
-      world: { width: 0, height: 0 },
-      landingPadRect: { x: 300, y: 590, width: 100, height: 10 },
-      autoPilotRunning: false
-    };
-    if (this.gameController) {
-      Object.assign(state, this.gameController.state);
-    }
-    if (this.autoPilot) {
-      state.autoPilotRunning = this.autoPilot.running;
-    }
-    return state;
   }
 
   onKeyDown = (e: KeyboardEvent) => {
@@ -160,14 +141,19 @@ export default class Model {
     this.config.saveToLocalStorage();
   }
 
-  resetGame() {
-    console.log(`Model: resetGame:`, this.config);
+  resetGame(type: string) {
+    console.log(`Model: resetGame: ${type}`, this.config);
     this.resetKeyStatus();
     this.quitGame();
-    this.gameController = new GameController(this);
-    this.autoPilot = new AutoPilot(this.gameController, this.keyStatus);
-    if (this.config.Game.autoPilot) {
-      this.autoPilot.start();
+    if (type === 'LanderGame') {
+      this.gameController = new LanderController(this);
+      this.autoPilot = new AutoPilot(this.gameController, this.keyStatus);
+      if (this.config.LanderGame.autoPilot) {
+        this.autoPilot.start();
+      }
+    } else if (type === 'PetGame') {
+      const stateData = this.config.PetGame;
+      this.gameController = new PetController(this, 'pet-1', stateData);
     }
   }
 
@@ -180,17 +166,38 @@ export default class Model {
     }
   }
 
-  update(): any {
+  copyGameState(state: any) {
+    let stateCopy: any = undefined;
+    if (state) {
+      stateCopy = {};
+      Object.assign(stateCopy, state);
+    }
+    return stateCopy;
+  }
+
+  getGameState(copy: boolean = false): any | undefined {
+    let state: any = undefined;
     if (this.gameController) {
-      this.gameController.update();
-      if (this.gameController.shipState === ShipState.CRASHED || this.gameController.shipState === ShipState.LANDED) {
+      if (copy) {
+        state = this.copyGameState(this.gameController.state);
+      } else {
+        state = this.gameController.state
+      }
+    }
+    return state;
+  }
+
+  update(options?: any): any {
+    let state: any = undefined;
+    if (this.gameController) {
+      state = this.gameController.update(options);
+      if (this.gameController.gameStatus === GameStatus.CRASHED || this.gameController.gameStatus === GameStatus.LANDED) {
         if (this.autoPilot) {
           this.autoPilot.running = false;
         }
       }
     }
-    // this.autoPilot?.update(); // autoPilot has its own update loop mechanism
-    return this.gameState;
+    return state;
   }
 
   dispose() {

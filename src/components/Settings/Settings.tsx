@@ -9,15 +9,16 @@ import FileDrop from '../FileDrop/FileDrop';
 
 export interface SettingsProps { model: Model, settings: GameConfig, changed: any, fileHandler: any }
 export interface SettingsState {
-  GameSettings: string;
+  LanderGameSettings: string;
+  PetGameSettings: string;
 }
 
 export default class Settings extends React.Component<SettingsProps, SettingsState> {
 
   public log: Log;
 
-  private _onChangeHandler: any = (event: any) => this.onChangeHandler(event);
-  private _onBlurHandler: any = (event: any) => this.onBlurHandler(event);
+  private _onChangeHandler: any = (type: string, event: any) => this.onChangeHandler(type, event);
+  private _onBlurHandler: any = (type: string, event: any) => this.onBlurHandler(type, event);
   private _onCheckboxHandler: any = (event: any) => this.onCheckboxHandler(event);
   private _onOptionHandler: any = (event: any) => this.onOptionHandler(event);
 
@@ -26,7 +27,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     this.log = parentLog.createChild('App');
     console.log(`this.props.settings:`, this.props.settings);
     this.state = {
-      GameSettings: GameConfig.SettingsToString(this.props.settings.Game) || "{}",
+      LanderGameSettings: GameConfig.SettingsToString(this.props.settings.LanderGame) || "{}",
+      PetGameSettings: GameConfig.SettingsToString(this.props.settings.PetGame) || "{}",
     }
   }
 
@@ -40,7 +42,8 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     // console.log(nextProps);
     if (true) {
       this.setState({
-        GameSettings: GameConfig.SettingsToString(nextProps.settings.Game) || this.state.GameSettings,
+        LanderGameSettings: GameConfig.SettingsToString(nextProps.settings.LanderGame) || this.state.LanderGameSettings,
+        PetGameSettings: GameConfig.SettingsToString(nextProps.settings.PetGame) || this.state.PetGameSettings,
       });
     }
   }
@@ -53,13 +56,16 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     }
   }
 
-  onChangeHandler(event: any) {
+  onChangeHandler(type: string, event: any) {
     const nativeEvent: any = event.nativeEvent;
     // this.log.debug(nativeEvent);
     let updateObj: any = undefined;
-    switch (nativeEvent.target.id) {
-      case 'GameSettings':
-        updateObj = { GameSettings: nativeEvent.target.value };
+    switch (type) {
+      case 'LanderGame':
+        updateObj = { LanderGameSettings: nativeEvent.target.value };
+        break;
+      case 'PetGame':
+        updateObj = { PetGameSettings: nativeEvent.target.value };
         break;
     }
 
@@ -68,10 +74,18 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
     }
   }
 
-  onBlurHandler(event: any) {
-    this.props.changed({
-      Game: GameConfig.SettingsToJson(this.state.GameSettings) || this.props.settings.Game,
-    });
+  onBlurHandler(type: string, event: any) {
+    switch (type) {
+      case 'LanderGame':
+        this.props.changed({
+          LanderGame: GameConfig.SettingsToJson(this.state.LanderGameSettings) || this.props.settings.LanderGame,
+        });
+        break;
+      case 'PetGame':
+        this.props.changed({
+          PetGame: GameConfig.SettingsToJson(this.state.PetGameSettings) || this.props.settings.PetGame,
+        });
+    }
   }
 
   onCheckboxHandler(event: any) {
@@ -121,8 +135,12 @@ export default class Settings extends React.Component<SettingsProps, SettingsSta
           <div className='SettingsGroup'>
             <div className='Row'>
               <div className="GameSettingsItem">
-                <label htmlFor="GameSettings" className="col-form-label">GameSettings</label>
-                <textarea id="GameSettings" rows={20} placeholder="" value={this.state.GameSettings} onChange={this._onChangeHandler} onBlur={this._onBlurHandler} />
+                <label htmlFor="LanderGameSettings" className="col-form-label">LanderGameSettings</label>
+                <textarea id="LanderGameSettings" rows={10} placeholder="" value={this.state.LanderGameSettings} onChange={(event) => this._onChangeHandler('LanderGame', event)} onBlur={(event) => this._onBlurHandler('LanderGame', event)} />
+              </div>
+              <div className="GameSettingsItem">
+                <label htmlFor="PetGameSettings" className="col-form-label">PetGameSettings</label>
+                <textarea id="PetGameSettings" rows={10} placeholder="" value={this.state.PetGameSettings} onChange={(event) => this._onChangeHandler('PetGame', event)} onBlur={(event) => this._onBlurHandler('PetGame', event)} />
               </div>
             </div>
           </div>

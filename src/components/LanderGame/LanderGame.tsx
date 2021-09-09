@@ -1,29 +1,23 @@
 import * as React from "react";
 
-import './Game.css';
+import './LanderGame.css';
 import Model from '../../model/Model';
+import { GameStatus } from '../../model/GameController';
 import Log from '../../utils/Log';
 
 import Checkbox from '../Checkbox/Checkbox';
-import GameCanvas from './GameCanvas';
+import LanderGameCanvas from './LanderGameCanvas';
 
-export enum ShipState {
-  FALLING,
-  THRUSTING,
-  LANDED,
-  CRASHED
-}
-
-export interface GameProps {
+export interface LanderGameProps {
   model: Model;
 }
 
-export interface GameState {
+export interface LanderGameState {
   shipCoords: any;
   shipVelocity: any;
   shipThrust: any;
   shipFuel: number;
-  shipState: ShipState;
+  gameStatus: GameStatus;
   gravity: any;
   world: any;
   landingPadRect: any;
@@ -34,20 +28,42 @@ export interface GameState {
   score: number;
 }
 
-export default class Game extends React.Component<GameProps, GameState> {
+export default class LanderGame extends React.Component<LanderGameProps, LanderGameState> {
 
   public log: Log;
 
   private _mainLoopInterval: NodeJS.Timeout;
 
-  constructor(props: GameProps) {
+  constructor(props: LanderGameProps) {
     super(props);
-    this.state = this.props.model.gameState;
+    const gameState = this.props.model.getGameState();
+    if (gameState) {
+      gameState.autoPilotRunning = this.props.model.autoPilot.running
+      this.state = gameState;
+    } else {
+      this.state = {
+        shipCoords: { x: 0, y: 0 },
+        shipVelocity: { x: 0, y: 0 },
+        shipThrust: { x: 0, y: 0 },
+        shipFuel: 0,
+        gameStatus: GameStatus.INVALID,
+        gravity: 0,
+        world: {
+          width: 800,
+          height: 600,
+        },
+        landingPadRect: { x: 0, y: 0, width: 0, height: 0 },
+        autoPilotRunning: false,
+        totalTime: 0,
+        fuelBonus: 0,
+        timeBonus: 0,
+        score: 0,
+      }
+    }
     console.log(this.state);
   }
 
   componentWillMount() {
-    this.props.model.resetGame();
     this._mainLoopInterval = setInterval(this.mainLoop, 100);
   }
 
@@ -80,7 +96,7 @@ export default class Game extends React.Component<GameProps, GameState> {
     switch (action) {
       case 'btnReset':
         console.log(`onButtonClicked: btnReset`);
-        this.props.model.resetGame();
+        this.props.model.resetGame('LanderGame');
         break;
     }
   }
@@ -138,14 +154,17 @@ export default class Game extends React.Component<GameProps, GameState> {
 
   mainLoop = () => {
     const gameState = this.props.model.update();
-    this.setState(gameState);
+    if (gameState) {
+      gameState.autoPilotRunning = this.props.model.autoPilot.running;
+      this.setState(gameState);
+    }
   }
 
   render() {
-    const gameStatusData = {
+    const gameStateData = {
       keyStatus: this.props.model.keyStatus,
       world: this.state.world,
-      shipState: ShipState[this.state.shipState],
+      gameStatus: GameStatus[this.state.gameStatus],
       shipFuel: this.state.shipFuel,
       shipVelocity: this.state.shipVelocity,
       totalTime: this.state.totalTime,
@@ -153,12 +172,12 @@ export default class Game extends React.Component<GameProps, GameState> {
       timeBonus: this.state.timeBonus,
       score: this.state.score,
     }
-    const gameStatus = JSON.stringify(gameStatusData, null, 2);
+    const gameStateText = JSON.stringify(gameStateData, null, 2);
     return (
-      <div className='Game' >
-        <GameCanvas shipCoords={this.state.shipCoords} shipThrust={this.state.shipThrust} shipState={this.state.shipState} world={this.state.world} landingPadRect={this.state.landingPadRect} shipFuel={this.state.shipFuel} />
-        <div id='GameControls'>
-          <textarea className="KeyStatus" value={gameStatus} readOnly rows={30} />
+      <div className='LanderGame' >
+        <LanderGameCanvas shipCoords={this.state.shipCoords} shipThrust={this.state.shipThrust} gameStatus={this.state.gameStatus} world={this.state.world} landingPadRect={this.state.landingPadRect} shipFuel={this.state.shipFuel} />
+        <div id='LanderGameControls'>
+          <textarea className="KeyStatus" value={gameStateText} readOnly rows={30} />
           <Checkbox label={'AutoPilot'} isChecked={this.state.autoPilotRunning} changed={(isChecked) => this.onCheckboxHandler('AutoPilot', isChecked)} />
           <button id='btnReset' type='button' className={`btn btn-primary App-button`}
             onClick={(event) => this.onButtonClicked(`btnReset`, event)}>

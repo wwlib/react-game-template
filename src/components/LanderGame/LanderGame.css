@@ -1,4 +1,4 @@
-.Game {
+.LanderGame {
   width: 1024px;
   height: 700px;
   background-color: #282c34;
@@ -7,21 +7,21 @@
   flex-direction: row;
 }
 
-.Game label {
+.LanderGame label {
   color: #cccccc;
 }
 
-.GameGroup {
+.LanderGameGroup {
 
 }
 
-.GameCanvas {
+.LanderGameCanvas {
   width: 800px;
   height: 600px;
   background-color: #222222;
 }
 
-.GameControls {
+.LanderGameControls {
   
   display: flex;
   flex-direction: column;
